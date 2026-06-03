@@ -1,0 +1,145 @@
+# ==========================
+# Python & Virtual Environments
+# ==========================
+__pycache__/
+*.py[cod]
+*.so
+.Python
+env/
+venv/
+.env
+.venv
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# ==========================
+# IDE & Editor
+# ==========================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.db
+
+# ==========================
+# Docker & Containers
+# ==========================
+*.log
+*.pid
+*.tmp
+docker-compose.override.yml
+.dockerignore
+.docker/
+docker-compose.*.yml
+!docker-compose.yml
+
+# ==========================
+# Data & Storage (bind mount dari host)
+# ==========================
+data/
+data/elasticsearch/
+data/grafana/
+data/storage/
+data/checkpoint/
+data/temp/
+logs/
+*.db
+*.sqlite
+*.sqlite3
+
+# ==========================
+# Model files (bisa besar)
+# ==========================
+models/*.pkl
+models/*.joblib
+models/*.h5
+models/*.onnx
+
+# ==========================
+# Kafka & Spark checkpoints (jika ada di host)
+# ==========================
+checkpoint/
+spark-warehouse/
+metastore_db/
+derby.log
+
+# ==========================
+# Elasticsearch & Grafana (bind mount)
+# ==========================
+/data/elasticsearch/*
+/data/grafana/*
+
+# ==========================
+# Frontend (React) build artifacts
+# ==========================
+frontend/node_modules/
+frontend/build/
+frontend/.next/
+frontend/out/
+frontend/dist/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+
+# ==========================
+# Backend & Python cache
+# ==========================
+backend/__pycache__/
+backend/.pytest_cache/
+*.pyc
+
+# ==========================
+# Prefect (jika ada local state)
+# ==========================
+.prefect/
+prefect_orion.db
+prefect.db
+*.prefect
+
+# ==========================
+# OS & Temp files
+# ==========================
+Thumbs.db
+*.tmp
+*.bak
+*.swp
+*.swo
+*~
+~$*
+
+# ==========================
+# Secrets & credentials
+# ==========================
+*.key
+*.pem
+*.crt
+*.p12
+.secrets/
+credentials.json
+*.secret
+.env.local
+.env.*.local
+
+# ==========================
+# Logs & Metrics
+# ==========================
+*.log
+logs/
+*.metrics

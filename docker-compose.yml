@@ -1,83 +1,65 @@
-networks:
-  flight-net:
-    driver: bridge
-
-volumes:
-  elasticsearch-data:
-  grafana-data:
-  zookeeper-data:
-  kafka-data:
-
 services:
+  # ========== KAFKA + ZOOKEEPER ==========
   zookeeper:
-    image: confluentinc/cp-zookeeper:6.2.0
-    container_name: zookeeper
-    ports:
-      - "2181:2181"
+    image: confluentinc/cp-zookeeper:latest
+    container_name: rosbd-zookeeper
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
-    volumes:
-      - zookeeper-data:/var/lib/zookeeper/data
-      - zookeeper-data:/var/lib/zookeeper/log
+    ports:
+      - "2181:2181"
     networks:
-      - flight-net
+      - rosbd-net
 
   kafka:
-    image: confluentinc/cp-kafka:6.2.0
-    container_name: kafka
-    ports:
-      - "9092:9092"
+    image: confluentinc/cp-kafka:latest
+    container_name: rosbd-kafka
+    depends_on:
+      - zookeeper
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-    volumes:
-      - kafka-data:/var/lib/kafka/data
-    networks:
-      - flight-net
-    depends_on:
-      - zookeeper
-
-  nginx:
-    image: nginx:alpine
-    container_name: nginx
     ports:
-      - "80:80"
+      - "9092:9092"
     networks:
-      - flight-net
+      - rosbd-net
 
-  spark:
-    image: jupyter/pyspark-notebook:latest
-    container_name: spark
-    ports:
-      - "8888:8888"
-      - "4040:4040"
-    networks:
-      - flight-net
-
-  sedona:
-    image: apache/sedona:latest
-    container_name: sedona
+  # ========== SPARK MASTER & WORKER (dengan image yang sudah di-pull) ==========
+  spark-master:
+    image: apache/spark:3.5.3-scala2.12-java11-python3-ubuntu
+    container_name: rosbd-spark-master
+    environment:
+      - SPARK_MASTER_HOST=spark-master
+      - SPARK_NO_DAEMONIZE=true
     ports:
       - "8080:8080"
+      - "7077:7077"
+    volumes:
+      - ./spark-apps:/opt/spark/apps
+      - ./data:/opt/spark/data
     networks:
-      - flight-net
-    command: ["tail", "-f", "/dev/null"]
+      - rosbd-net
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
 
-  neug:
-    image: alpine:latest
-    container_name: neug
-    command: ["tail", "-f", "/dev/null"]
+  spark-worker:
+    image: apache/spark:3.5.3-scala2.12-java11-python3-ubuntu
+    container_name: rosbd-spark-worker
+    depends_on:
+      - spark-master
+    environment:
+      - SPARK_NO_DAEMONIZE=true
+    volumes:
+      - ./spark-apps:/opt/spark/apps
+      - ./data:/opt/spark/data
     networks:
-      - flight-net
+      - rosbd-net
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
 
+  # ========== STORAGE = ELASTICSEARCH ==========
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
-    container_name: elasticsearch
+    container_name: rosbd-elasticsearch
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
@@ -85,59 +67,126 @@ services:
     ports:
       - "9200:9200"
     volumes:
-      - elasticsearch-data:/usr/share/elasticsearch/data
+      - ./data/elasticsearch:/usr/share/elasticsearch/data
     networks:
-      - flight-net
+      - rosbd-net
 
+  # ========== LOGGING & MONITORING = GRAFANA ==========
   grafana:
-    image: grafana/grafana:latest
-    container_name: grafana
+    image: grafana/grafana:10.2.0
+    container_name: rosbd-grafana
     ports:
       - "3000:3000"
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
     volumes:
-      - grafana-data:/var/lib/grafana
+      - ./data/grafana:/var/lib/grafana
+      - ./grafana-provisioning:/etc/grafana/provisioning
     networks:
-      - flight-net
-
-  ingester:
-    build: .
-    container_name: ingester
+      - rosbd-net
     depends_on:
-      - kafka
       - elasticsearch
-    environment:
-      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-      - ELASTICSEARCH_HOST=elasticsearch:9200
-    volumes:
-      - ./credentials.json:/app/credentials.json   # ★ mount file credentials
-    command: ["python", "ingester.py"]
-    networks:
-      - flight-net
 
-  optimizer:
-    build: .
-    container_name: optimizer
+  # ========== BACKEND SERVICES (FastAPI) ==========
+  eta-api:
+    build: ./backend
+    container_name: rosbd-eta-api
+    command: uvicorn eta_api:app --host 0.0.0.0 --port 8001
     ports:
-      - "8000:8000"
-    depends_on:
-      - elasticsearch
-    environment:
-      - ELASTICSEARCH_HOST=elasticsearch:9200
-    command: ["uvicorn", "optimizer:app", "--host", "0.0.0.0", "--port", "8000"]
+      - "8001:8001"
+    volumes:
+      - ./backend:/app
+      - ./models:/app/models
     networks:
-      - flight-net
+      - rosbd-net
 
-  anomaly:
-    build: .
-    container_name: anomaly
+  optimasi-api:
+    build: ./backend
+    container_name: rosbd-optimasi-api
+    command: uvicorn optimasi_api:app --host 0.0.0.0 --port 8002
+    ports:
+      - "8002:8002"
+    volumes:
+      - ./backend:/app
+      - ./models:/app/models
+    networks:
+      - rosbd-net
+
+  anomali-api:
+    build: ./backend
+    container_name: rosbd-anomali-api
+    command: uvicorn anomali_api:app --host 0.0.0.0 --port 8003
+    ports:
+      - "8003:8003"
+    volumes:
+      - ./backend:/app
+      - ./models:/app/models
+    networks:
+      - rosbd-net
+
+  notification:
+    build: ./backend
+    container_name: rosbd-notification
+    command: python notification.py
     depends_on:
       - kafka
-      - elasticsearch
-    environment:
-      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-      - ELASTICSEARCH_HOST=elasticsearch:9200
-    command: ["python", "anomaly.py"]
+    volumes:
+      - ./backend:/app
     networks:
-      - flight-net
+      - rosbd-net
+
+  # ========== LOAD BALANCER = NGINX ==========
+  nginx:
+    image: nginx:alpine
+    container_name: rosbd-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - rosbd-net
+    depends_on:
+      - eta-api
+      - optimasi-api
+      - anomali-api
+
+  # ========== SCHEDULER = PREFECT ==========
+  prefect-server:
+    image: prefecthq/prefect:3-latest
+    container_name: rosbd-prefect-server
+    command: prefect server start --host 0.0.0.0
+    ports:
+      - "4200:4200"
+    environment:
+      - PREFECT_API_URL=http://prefect-server:4200/api
+    networks:
+      - rosbd-net
+
+  prefect-worker:
+    image: prefecthq/prefect:3-latest
+    container_name: rosbd-prefect-worker
+    depends_on:
+      - prefect-server
+    environment:
+      - PREFECT_API_URL=http://prefect-server:4200/api
+    volumes:
+      - ./prefect/flows:/flows
+      - ./spark-apps:/spark-apps
+    command: prefect worker start --pool default-pool --type process
+    networks:
+      - rosbd-net
+
+  # ========== VISUALIZATION = REACT ==========
+  frontend:
+    build: ./frontend
+    container_name: rosbd-frontend
+    ports:
+      - "3001:80"
+    networks:
+      - rosbd-net
+    depends_on:
+      - nginx
+
+networks:
+  rosbd-net:
+    driver: bridge

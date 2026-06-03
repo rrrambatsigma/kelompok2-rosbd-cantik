@@ -1,0 +1,7 @@
+{
+  "name": "rosbd-frontend",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "mkdir build && echo '<h1>ROSBD Frontend</h1>' > build/index.html"
+  }
+}
