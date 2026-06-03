@@ -1,0 +1,96 @@
+# ==========================
+# Git & Version Control
+# ==========================
+.git/
+.gitignore
+.gitattributes
+
+# ==========================
+# Docker files (avoid recursive)
+# ==========================
+Dockerfile
+.dockerignore
+docker-compose*.yml
+*.dockerignore
+
+# ==========================
+# IDE & Editor
+# ==========================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# ==========================
+# Python cache & virtual env
+# ==========================
+__pycache__/
+*.py[cod]
+*.so
+.Python
+env/
+venv/
+.venv
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.tox/
+
+# ==========================
+# Data & storage (mount from host, exclude from image)
+# ==========================
+data/
+logs/
+*.db
+*.sqlite
+*.sqlite3
+
+# ==========================
+# Model files (large, should be mounted as volume)
+# ==========================
+models/*.pkl
+models/*.joblib
+models/*.h5
+
+# ==========================
+# Frontend build artifacts (if included)
+# ==========================
+frontend/node_modules/
+frontend/build/
+frontend/.next/
+npm-debug.log*
+
+# ==========================
+# Secrets & env
+# ==========================
+.env
+.env.*
+*.key
+*.pem
+*.crt
+.secrets/
+
+# ==========================
+# OS & temp
+# ==========================
+Thumbs.db
+*.tmp
+*.bak
+*.log
+*.pid
+
+# ==========================
+# Prefect local state
+# ==========================
+.prefect/
+prefect_orion.db
+*.prefect
+
+# ==========================
+# Elasticsearch & Grafana local data
+# ==========================
+elasticsearch/
+grafana/

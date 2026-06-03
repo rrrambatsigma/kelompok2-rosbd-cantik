@@ -7,4 +7,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY *.py .
 
-CMD ["python", "ingester.py"]
+# Tambah -u supaya output tidak di-buffer
+CMD ["python", "-u", "ingester.py"]
