@@ -7,7 +7,6 @@ KAFKA_BOOTSTRAP = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "kafka:9092")
 TOPIC = "flights"
 INTERVAL = 30
 
-# Bounding box Eropa
 BOUNDING_BOX = {
     "lamin": 34.5,
     "lomin": -10.0,
@@ -15,13 +14,15 @@ BOUNDING_BOX = {
     "lomax": 40.0
 }
 
+TOKEN_URL = "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token"
+TOKEN_REFRESH_MARGIN = 30
+
 class TokenManager:
     def __init__(self, clientId, clientSecret):
         self.clientId = clientId
         self.clientSecret = clientSecret
         self.token = None
         self.expires_at = None
-        self.token_url = "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token"
 
     def get_token(self):
         if self.token and self.expires_at and datetime.now() < self.expires_at:
@@ -30,37 +31,38 @@ class TokenManager:
 
     def _refresh(self):
         print("Refreshing token...")
-        r = requests.post(self.token_url, data={
-            "grant_type": "client_credentials",
-            "clientId": self.clientId,
-            "clientSecret": self.clientSecret,
-        })
+        r = requests.post(
+            TOKEN_URL,
+            data={
+                "grant_type": "client_credentials",
+                "clientID": self.clientId,
+                "clientSecret": self.clientSecret,
+            },
+        )
         r.raise_for_status()
         data = r.json()
         self.token = data["access_token"]
         expires_in = data.get("expires_in", 1800)
-        self.expires_at = datetime.now() + timedelta(seconds=expires_in)
-        print("Token refreshed successfully")
+        self.expires_at = datetime.now() + timedelta(seconds=expires_in - TOKEN_REFRESH_MARGIN)
+        print("Token refreshed")
         return self.token
 
     def headers(self):
         return {"Authorization": f"Bearer {self.get_token()}"}
 
-# Load credentials
 try:
     with open("credentials.json", "r") as f:
         creds = json.load(f)
-    clientId = creds["clientId"]
+    clientID = creds["clientID"]
     clientSecret = creds["clientSecret"]
     print("Credentials loaded.")
 except Exception as e:
     print(f"Error loading credentials.json: {e}")
     exit(1)
 
-token_manager = TokenManager(clientId, clientSecret)
+token_manager = TokenManager(clientID, clientSecret)
 
-# === RETRY MECHANISM FOR KAFKA ===
-print(f"Waiting for Kafka at {KAFKA_BOOTSTRAP}...")
+print(f"Connecting to Kafka at {KAFKA_BOOTSTRAP}...")
 producer = None
 while producer is None:
     try:
@@ -70,10 +72,10 @@ while producer is None:
         )
         print("Kafka connected!")
     except NoBrokersAvailable:
-        print("Kafka not ready yet, retrying in 3 seconds...")
+        print("Kafka not ready, retrying in 3 sec...")
         time.sleep(3)
     except Exception as e:
-        print(f"Unexpected error connecting to Kafka: {e}")
+        print(f"Error connecting to Kafka: {e}, retrying...")
         time.sleep(3)
 
 print("Starting OpenSky ingester...")
@@ -94,15 +96,9 @@ while True:
                 "icao24": state[0],
                 "callsign": state[1].strip() if state[1] else None,
                 "origin_country": state[2],
-                "time_position": state[3],
-                "last_contact": state[4],
                 "longitude": state[5],
                 "latitude": state[6],
-                "baro_altitude": state[7],
-                "on_ground": state[8],
                 "velocity": state[9],
-                "true_track": state[10],
-                "vertical_rate": state[11],
                 "geo_altitude": state[13] if len(state) > 13 else None,
                 "timestamp": time.time()
             }

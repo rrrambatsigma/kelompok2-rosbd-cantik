@@ -111,7 +111,7 @@ services:
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - ELASTICSEARCH_HOST=elasticsearch:9200
     volumes:
-      - ./credentials.json:/app/credentials.json   # ★ mount file credentials
+      - ./credentials.json:/app/credentials.json  
     command: ["python", "ingester.py"]
     networks:
       - flight-net
