@@ -5,28 +5,31 @@ import requests
 from datetime import datetime, timedelta
 from kafka import KafkaProducer
 from kafka.errors import NoBrokersAvailable
+from elasticsearch import Elasticsearch 
+import warnings
+warnings.filterwarnings("ignore")  
 
-# ── Config ──────────────────────────────────────────────
 KAFKA_BOOTSTRAP = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "kafka:9092")
 TOPIC           = "flights"
-INTERVAL        = 30  # detik antar fetch
+INTERVAL        = 5
 
 BOUNDING_BOX = {
-    "lamin": -11.0,   # Latitude min  (ujung selatan Indonesia)
-    "lomin": 94.0,    # Longitude min (ujung barat Indonesia)
-    "lamax":  6.0,    # Latitude max  (ujung utara Indonesia)
-    "lomax": 141.0,   # Longitude max (ujung timur Indonesia)
+    "lamin": 34.5,   
+    "lomin": -10.0,  
+    "lamax": 71.0,   
+    "lomax": 40.0    
 }
 
 TOKEN_URL            = "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token"
-TOKEN_REFRESH_MARGIN = 30  # refresh token 30 detik sebelum expired
+TOKEN_REFRESH_MARGIN = 30
 CREDENTIALS_FILE     = os.getenv("CREDENTIALS_FILE", "credentials.json")
-# ────────────────────────────────────────────────────────
+
+# Elasticsearch
+ES_HOST = os.getenv("ELASTICSEARCH_HOST", "elasticsearch:9200")
+es = Elasticsearch(f"http://{ES_HOST}")
 
 
 class TokenManager:
-    """Handle OAuth2 client_credentials token untuk OpenSky API."""
-
     def __init__(self, client_id: str, client_secret: str):
         self.client_id     = client_id
         self.client_secret = client_secret
@@ -39,83 +42,80 @@ class TokenManager:
         return self._refresh()
 
     def _refresh(self) -> str:
-        print("[TOKEN] Refreshing token...")
-        try:
-            r = requests.post(
-                TOKEN_URL,
-                data={
-                    "grant_type":    "client_credentials",
-                    "client_id":     self.client_id,
-                    "client_secret": self.client_secret,
-                },
-                timeout=10,
-            )
-            r.raise_for_status()
-        except requests.exceptions.HTTPError as e:
-            print(f"[TOKEN] HTTP error saat refresh token: {r.status_code} - {r.text}")
-            raise
-        except Exception as e:
-            print(f"[TOKEN] Gagal refresh token: {e}")
-            raise
-
-        data            = r.json()
-        self.token      = data["access_token"]
-        expires_in      = data.get("expires_in", 1800)
+        print("[TOKEN] Refreshing...")
+        r = requests.post(
+            TOKEN_URL,
+            data={
+                "grant_type":    "client_credentials",
+                "client_id":     self.client_id,
+                "client_secret": self.client_secret,
+            },
+            timeout=10,
+        )
+        r.raise_for_status()
+        data = r.json()
+        self.token = data["access_token"]
+        expires_in = data.get("expires_in", 1800)
         self.expires_at = datetime.now() + timedelta(seconds=expires_in - TOKEN_REFRESH_MARGIN)
-        print(f"[TOKEN] Token refreshed, berlaku {expires_in}s")
+        print("[TOKEN] OK")
         return self.token
 
     def auth_headers(self) -> dict:
         return {"Authorization": f"Bearer {self.get_token()}"}
 
 
-def load_credentials(path: str) -> tuple[str, str]:
-    """Baca credentials.json dan return (client_id, client_secret)."""
-    print(f"[CREDS] Membaca credentials dari: {path}")
-    try:
-        with open(path, "r") as f:
-            creds = json.load(f)
-
-        # Debug: tampilkan key yang tersedia
-        print(f"[CREDS] Keys ditemukan: {list(creds.keys())}")
-
-        client_id     = creds["clientId"]
-        client_secret = creds["clientSecret"]
-        print(f"[CREDS] Loaded client_id: {client_id[:20]}...")
-        return client_id, client_secret
-
-    except FileNotFoundError:
-        print(f"[CREDS] ❌ File tidak ditemukan: {path}")
-        raise
-    except KeyError as e:
-        print(f"[CREDS] ❌ Key tidak ada di credentials.json: {e}")
-        print(f"[CREDS] Pastikan format file:")
-        print('         { "clientId": "...", "clientSecret": "..." }')
-        raise
-    except json.JSONDecodeError as e:
-        print(f"[CREDS] ❌ Format JSON tidak valid: {e}")
-        raise
+def load_credentials(path: str):
+    with open(path, "r") as f:
+        creds = json.load(f)
+    if "clientId" in creds:
+        return creds["clientId"], creds["clientSecret"]
+    elif "client_id" in creds:
+        return creds["client_id"], creds["client_secret"]
+    else:
+        raise KeyError("Missing clientId/client_id in credentials.json")
 
 
 def connect_kafka(bootstrap: str) -> KafkaProducer:
-    """Koneksi ke Kafka dengan retry loop."""
-    print(f"[KAFKA] Menghubungkan ke {bootstrap}...")
+    print(f"[KAFKA] Connecting to {bootstrap}...")
     while True:
         try:
             producer = KafkaProducer(
                 bootstrap_servers=bootstrap,
                 value_serializer=lambda v: json.dumps(v).encode("utf-8"),
-                retries=5,
-                acks="all",
             )
-            print("[KAFKA] ✅ Terhubung!")
+            print("[KAFKA] Connected")
             return producer
         except NoBrokersAvailable:
-            print("[KAFKA] Broker belum siap, retry 5s...")
+            print("[KAFKA] Broker not ready, retry 5s")
             time.sleep(5)
         except Exception as e:
-            print(f"[KAFKA] Error: {e}, retry 5s...")
+            print(f"[KAFKA] Error: {e}, retry 5s")
             time.sleep(5)
+
+
+def preprocess_and_save(flight_dict: dict) -> None:
+    """Preprocessing dan simpan ke Elasticsearch."""
+    if not flight_dict.get("callsign"):
+        return
+    if flight_dict.get("longitude") is None or flight_dict.get("latitude") is None:
+        return
+
+    flight_dict["region"] = "Europe"
+
+    if flight_dict.get("velocity") is not None:
+        flight_dict["velocity_kmh"] = flight_dict["velocity"] * 3.6
+    else:
+        flight_dict["velocity_kmh"] = None
+
+    # Filter altitude tidak wajar (misal > 20km)
+    if flight_dict.get("geo_altitude") and flight_dict["geo_altitude"] > 20000:
+        flight_dict["geo_altitude"] = None
+
+
+    try:
+        es.index(index="flights", document=flight_dict)
+    except Exception as e:
+        print(f"[ES] Error saving: {e}")
 
 
 def parse_state(state: list) -> dict:
@@ -141,80 +141,63 @@ def parse_state(state: list) -> dict:
 
 
 def fetch_flights(token_manager: TokenManager) -> list:
-    """Fetch data penerbangan dari OpenSky API."""
     resp = requests.get(
         "https://opensky-network.org/api/states/all",
         params=BOUNDING_BOX,
         headers=token_manager.auth_headers(),
         timeout=15,
     )
-
     if resp.status_code == 429:
-        print("[FETCH] ⚠️  Rate limited (429), tunggu 60s...")
+        print("[FETCH] Rate limited, wait 60s")
         time.sleep(60)
         return []
-
     if resp.status_code == 401:
-        print("[FETCH] ⚠️  Token tidak valid (401), force refresh...")
-        token_manager.token = None  # force refresh next call
+        print("[FETCH] Token invalid, force refresh")
+        token_manager.token = None
         return []
-
     resp.raise_for_status()
     data = resp.json()
     return data.get("states") or []
 
 
 def main():
-    # 1. Load credentials
     client_id, client_secret = load_credentials(CREDENTIALS_FILE)
-
-    # 2. Setup token manager
     token_manager = TokenManager(client_id, client_secret)
 
-    # 3. Test token sekali di awal
-    print("[INIT] Test ambil token...")
     try:
         token_manager.get_token()
-        print("[INIT] ✅ Token OK")
+        print("[INIT] Token OK")
     except Exception as e:
-        print(f"[INIT] ❌ Gagal ambil token: {e}")
+        print(f"[INIT] Token failed: {e}")
         exit(1)
 
-    # 4. Connect Kafka
     producer = connect_kafka(KAFKA_BOOTSTRAP)
 
-    # 5. Main loop
-    print(f"[MAIN] 🚀 Ingester berjalan, fetch setiap {INTERVAL}s...")
+    print(f"[MAIN] Ingester Europe started, interval {INTERVAL}s")
     consecutive_errors = 0
 
     while True:
         try:
             states = fetch_flights(token_manager)
-
             if states:
                 count = 0
                 for state in states:
                     flight = parse_state(state)
+                    # Kirim ke Kafka
                     producer.send(TOPIC, flight)
+                    # Preprocess & simpan ke Elasticsearch
+                    preprocess_and_save(flight.copy())
                     count += 1
-
                 producer.flush()
-                print(f"[MAIN] ✅ Terkirim {count} penerbangan — {datetime.now().strftime('%H:%M:%S')}")
+                print(f"[MAIN] Sent {count} flights, saved to ES")
                 consecutive_errors = 0
             else:
-                print(f"[MAIN] ℹ️  Tidak ada data — {datetime.now().strftime('%H:%M:%S')}")
-
+                print("[MAIN] No data")
             time.sleep(INTERVAL)
-
-        except requests.exceptions.HTTPError as e:
-            consecutive_errors += 1
-            print(f"[MAIN] ❌ HTTP Error: {e}")
-            time.sleep(min(10 * consecutive_errors, 60))  # backoff max 60s
-
         except Exception as e:
             consecutive_errors += 1
-            print(f"[MAIN] ❌ Error: {e}")
-            time.sleep(min(5 * consecutive_errors, 30))   # backoff max 30s
+            print(f"[MAIN] Error: {e}")
+            time.sleep(min(5 * consecutive_errors, 60))
 
 
 if __name__ == "__main__":

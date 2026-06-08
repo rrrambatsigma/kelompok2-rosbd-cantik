@@ -107,11 +107,14 @@ services:
     depends_on:
       - kafka
       - elasticsearch
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     environment:
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - ELASTICSEARCH_HOST=elasticsearch:9200
     volumes:
-      - ./credentials.json:/app/credentials.json  
+      - ./credentials.json:/app/credentials.json
     command: ["python", "-u", "ingester.py"]
     networks:
       - flight-net
@@ -139,5 +142,23 @@ services:
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - ELASTICSEARCH_HOST=elasticsearch:9200
     command: ["python", "anomaly.py"]
+    networks:
+      - flight-net
+
+  saver:
+    build: .
+    container_name: saver
+    depends_on:
+      - kafka
+      - elasticsearch
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - ELASTICSEARCH_HOST=elasticsearch:9200
+      - TELEGRAM_BOT_TOKEN=8728781688:AAGpad63jzYWEDDfi5i22SOIDIRcVeoDqCE
+      - TELEGRAM_CHAT_ID=7587791731
+    command: ["python", "-u", "saver.py"]
     networks:
       - flight-net
