@@ -89,17 +89,18 @@ services:
     networks:
       - flight-net
 
+  # Kibana diarahkan ke Elasticsearch teman via Tailscale (100.99.130.69)
   kibana:
     image: docker.elastic.co/kibana/kibana:8.11.0
     container_name: kibana
     ports:
       - "5601:5601"
     environment:
-      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - ELASTICSEARCH_HOSTS=http://100.99.130.69:9200
+    extra_hosts:
+      - "host-gateway:host-gateway"
     networks:
       - flight-net
-    depends_on:
-      - elasticsearch
 
   grafana:
     image: grafana/grafana:latest
