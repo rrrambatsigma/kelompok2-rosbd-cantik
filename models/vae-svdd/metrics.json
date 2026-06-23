@@ -1,0 +1,12 @@
+{
+  "accuracy_combined": 0.7686189443239335,
+  "precision_combined": 0.7019230769230769,
+  "recall_combined": 0.20165745856353592,
+  "f1_combined": 0.3133047210300429,
+  "auc_combined": 0.5347941840141558,
+  "auc_recon": 0.6431350479705196,
+  "tp_combined": 73,
+  "fp_combined": 31,
+  "fn_combined": 289,
+  "tn_combined": 990
+}

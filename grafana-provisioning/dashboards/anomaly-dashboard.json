@@ -1,0 +1,332 @@
+{
+  "__inputs": [],
+  "__requires": [],
+  "title": "ADS-B Anomaly Detection - VAE-SVDD",
+  "uid": "adsb-anomaly-vae-svdd",
+  "version": 1,
+  "schemaVersion": 36,
+  "tags": ["ads-b", "anomaly", "vae-svdd"],
+  "timezone": "browser",
+  "editable": true,
+  "panels": [
+    {
+      "title": "Anomaly Stream - Real Time",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 4, "x": 0, "y": 0},
+      "targets": [{
+        "expr": "count(is_anomaly=true)",
+        "format": "table",
+        "intervalFactor": 1,
+        "refId": "A",
+        "dataSource": "Elasticsearch",
+        "query": {
+          "index": "anomaly-stream",
+          "query": "is_anomaly: true",
+          "timeField": "timestamp"
+        },
+        "metrics": [{ "type": "count", "field": "is_anomaly" }]
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "background"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "red", "value": 1}
+            ]
+          }
+        }
+      },
+      "description": "Total anomalies detected in real-time stream"
+    },
+    {
+      "title": "Total Flights Processed",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 4, "x": 4, "y": 0},
+      "targets": [{
+        "expr": "count(*)",
+        "format": "table",
+        "intervalFactor": 1,
+        "refId": "A",
+        "dataSource": "Elasticsearch",
+        "query": {
+          "index": "anomaly-stream",
+          "query": "*",
+          "timeField": "timestamp"
+        },
+        "metrics": [{ "type": "count" }]
+      }],
+      "description": "Total data points processed by anomaly detector"
+    },
+    {
+      "title": "Anomaly Rate (%)",
+      "type": "gauge",
+      "gridPos": {"h": 4, "w": 4, "x": 8, "y": 0},
+      "targets": [{
+        "expr": "count(is_anomaly=true) / count(*) * 100",
+        "format": "table",
+        "intervalFactor": 1,
+        "refId": "A",
+        "dataSource": "Elasticsearch",
+        "query": {
+          "index": "anomaly-stream",
+          "query": "is_anomaly: true",
+          "timeField": "timestamp"
+        },
+        "metrics": [{ "type": "count" }]
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "min": 0,
+          "max": 100,
+          "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "orange", "value": 5},
+              {"color": "red", "value": 10}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "title": "Anomaly Score Timeline",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+      "targets": [{
+        "format": "timeseries",
+        "intervalFactor": 1,
+        "refId": "A",
+        "dataSource": "Elasticsearch",
+        "query": {
+          "index": "anomaly-stream",
+          "query": "*",
+          "timeField": "timestamp"
+        },
+        "metrics": [
+          { "type": "avg", "field": "combined_score" },
+          { "type": "avg", "field": "recon_error" },
+          { "type": "avg", "field": "svdd_distance" }
+        ],
+        "groupBy": [{ "type": "date_histogram", "field": "timestamp", "interval": "auto" }]
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "lineInterpolation": "smooth",
+            "showPoints": "never"
+          }
+        }
+      },
+      "description": "Combined anomaly score, reconstruction error, and SVDD distance over time"
+    },
+    {
+      "title": "Anomaly by Attack Type",
+      "type": "piechart",
+      "gridPos": {"h": 8, "w": 6, "x": 12, "y": 4},
+      "targets": [{
+        "format": "table",
+        "intervalFactor": 1,
+        "refId": "A",
+        "dataSource": "Elasticsearch",
+        "query": {
+          "index": "anomaly-stream",
+          "query": "is_anomaly: true",
+          "timeField": "timestamp"
+        },
+        "metrics": [{ "type": "count" }],
+        "bucketAggs": [{ "type": "terms", "field": "attack_type.keyword", "size": 10 }]
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "displayMode": "basic" }
+        }
+      },
+      "description": "Distribution of detected anomaly types"
+    },
+    {
+      "title": "Anomaly Locations Map",
+      "type": "geomap",
+      "gridPos": {"h": 10, "w": 12, "x": 0, "y": 12},
+      "targets": [{
+        "format": "table",
+        "intervalFactor": 1,
+        "refId": "A",
+        "dataSource": "Elasticsearch",
+        "query": {
+          "index": "anomaly-stream",
+          "query": "is_anomaly: true",
+          "timeField": "timestamp"
+        },
+        "metrics": [{ "type": "count" }]
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false }
+          }
+        }
+      },
+      "description": "Geographic visualization of detected anomalies"
+    },
+    {
+      "title": "Attack Type Over Time",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
+      "targets": [{
+        "format": "timeseries",
+        "intervalFactor": 1,
+        "refId": "A",
+        "dataSource": "Elasticsearch",
+        "query": {
+          "index": "anomaly-stream",
+          "query": "is_anomaly: true",
+          "timeField": "timestamp"
+        },
+        "metrics": [{ "type": "count" }],
+        "groupBy": [
+          { "type": "date_histogram", "field": "timestamp", "interval": "auto" },
+          { "type": "terms", "field": "attack_type.keyword", "size": 6 }
+        ]
+      }],
+      "stacking": { "mode": "normal", "group": "A" },
+      "description": "Stacked timeline showing which attack types are detected over time"
+    },
+    {
+      "title": "Model Performance Metrics",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 3, "x": 0, "y": 22},
+      "targets": [{
+        "format": "table",
+        "intervalFactor": 1,
+        "refId": "A",
+        "dataSource": "Elasticsearch",
+        "query": {
+          "index": "model-performance",
+          "query": "*",
+          "timeField": "timestamp",
+          "sort": { "timestamp": "desc" },
+          "size": 1
+        },
+        "metrics": [{ "type": "avg", "field": "precision" }]
+      }],
+      "description": "Model precision from latest evaluation"
+    },
+    {
+      "title": "Model Recall",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 3, "x": 3, "y": 22},
+      "targets": [{
+        "format": "table",
+        "intervalFactor": 1,
+        "refId": "A",
+        "dataSource": "Elasticsearch",
+        "query": {
+          "index": "model-performance",
+          "query": "*",
+          "timeField": "timestamp",
+          "sort": { "timestamp": "desc" },
+          "size": 1
+        },
+        "metrics": [{ "type": "avg", "field": "recall" }]
+      }],
+      "description": "Model recall from latest evaluation"
+    },
+    {
+      "title": "Model F1 Score",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 3, "x": 6, "y": 22},
+      "targets": [{
+        "format": "table",
+        "intervalFactor": 1,
+        "refId": "A",
+        "dataSource": "Elasticsearch",
+        "query": {
+          "index": "model-performance",
+          "query": "*",
+          "timeField": "timestamp",
+          "sort": { "timestamp": "desc" },
+          "size": 1
+        },
+        "metrics": [{ "type": "avg", "field": "f1_score" }]
+      }],
+      "description": "Model F1 score from latest evaluation"
+    },
+    {
+      "title": "Dominant Feature Distribution",
+      "type": "barchart",
+      "gridPos": {"h": 6, "w": 6, "x": 9, "y": 22},
+      "targets": [{
+        "format": "table",
+        "intervalFactor": 1,
+        "refId": "A",
+        "dataSource": "Elasticsearch",
+        "query": {
+          "index": "anomaly-stream",
+          "query": "is_anomaly: true",
+          "timeField": "timestamp"
+        },
+        "metrics": [{ "type": "count" }],
+        "bucketAggs": [{ "type": "terms", "field": "dominant_feature.keyword", "size": 10 }]
+      }],
+      "description": "Which feature contributed most to anomaly detection"
+    },
+    {
+      "title": "Recent Anomalies Table",
+      "type": "table",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 26},
+      "targets": [{
+        "format": "table",
+        "intervalFactor": 1,
+        "refId": "A",
+        "dataSource": "Elasticsearch",
+        "query": {
+          "index": "anomaly-stream",
+          "query": "is_anomaly: true",
+          "timeField": "timestamp",
+          "sort": { "timestamp": "desc" },
+          "size": 50
+        },
+        "metrics": [{ "type": "raw_data", "settings": { "fields": ["timestamp", "icao24", "callsign", "attack_type", "combined_score", "dominant_feature"] } }]
+      }],
+      "description": "Latest 50 anomaly events with details"
+    },
+    {
+      "title": "Anomaly vs Normal (Reconstruction Error)",
+      "type": "histogram",
+      "gridPos": {"h": 6, "w": 6, "x": 12, "y": 28},
+      "targets": [
+        {
+          "format": "table",
+          "intervalFactor": 1,
+          "refId": "normal",
+          "dataSource": "Elasticsearch",
+          "query": {
+            "index": "anomaly-stream",
+            "query": "is_anomaly: false",
+            "timeField": "timestamp"
+          },
+          "metrics": [{ "type": "avg", "field": "recon_error" }]
+        },
+        {
+          "format": "table",
+          "intervalFactor": 1,
+          "refId": "anomaly",
+          "dataSource": "Elasticsearch",
+          "query": {
+            "index": "anomaly-stream",
+            "query": "is_anomaly: true",
+            "timeField": "timestamp"
+          },
+          "metrics": [{ "type": "avg", "field": "recon_error" }]
+        }
+      ],
+      "description": "Distribution of reconstruction error for normal vs anomalous data"
+    }
+  ],
+  "refresh": "10s",
+  "time": { "from": "now-1h", "to": "now" }
+}

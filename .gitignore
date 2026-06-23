@@ -1,2 +1,7 @@
 .env
 venv
+__pycache__/
+*.pyc
+models/vae-svdd/vae.pt
+models/vae-svdd/svdd.joblib
+models/vae-svdd/scaler.joblib
