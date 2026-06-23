@@ -202,8 +202,8 @@ services:
     environment:
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - ELASTICSEARCH_HOST=elasticsearch:9200
-      - TELEGRAM_BOT_TOKEN=8728781688:AAGpad63jzYWEDDfi5i22SOIDIRcVeoDqCE
-      - TELEGRAM_CHAT_ID=7587791731
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
     command: ["python", "-u", "ingest/saver.py"]
     networks:
       - flight-net

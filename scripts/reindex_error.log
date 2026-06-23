@@ -247,3 +247,7 @@
 
 [2026-06-20 17:58:23] [ERROR] HTTP  on Get http://100.99.130.69:9200/
 
+[2026-06-23 20:42:50] [ERROR] HTTP NotFound on Get http://localhost:9200/flights-remote-3
+
+[2026-06-23 21:12:51] [ERROR] HTTP  on Post http://localhost:9200/_reindex?wait_for_completion=true
+

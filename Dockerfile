@@ -5,12 +5,14 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-RUN pip install --no-cache-dir torch==2.0.1+cpu -f https://download.pytorch.org/whl/torch_stable.html
+# PyTorch CPU-only (versi sesuai local: 2.12.1)
+RUN pip install --no-cache-dir torch --extra-index-url https://download.pytorch.org/whl/cpu
 
 COPY ingest/ ./ingest/
 COPY preprocessing/ ./preprocessing/
 COPY modelling/ ./modelling/
 COPY serving/ ./serving/
+COPY scripts/ ./scripts/
 COPY models/ ./models/
 
-CMD ["python", "-u", "ingestion/ingester.py"]
+CMD ["python", "-u", "ingest/ingester.py"]

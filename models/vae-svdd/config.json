@@ -1,5 +1,9 @@
 {
-  "threshold": 0.11511718422732345,
+  "threshold": 0.6515821218490601,
+  "threshold_method": "recon_p95",
+  "threshold_youden_recon": 0.6515821218490601,
+  "threshold_youden_combined": 9.747522767782186,
+  "best_threshold": 0.6515821218490601,
   "feature_names": [
     "latitude",
     "longitude",
@@ -13,14 +17,14 @@
     "dtrack"
   ],
   "n_features": 10,
-  "latent_dim": 8,
+  "latent_dim": 16,
   "window_size": 10,
   "hidden_dim": 64,
-  "vae_epochs": 200,
+  "vae_epochs": 300,
   "vae_lr": 0.001,
-  "vae_beta": 0.0,
+  "vae_beta": 0.001,
   "svdd_nu": 0.05,
   "svdd_gamma": "auto",
   "threshold_percentile": 95,
-  "training_date": "2026-06-19T19:40:42.591327"
+  "training_date": "2026-06-23T19:29:30.019703"
 }

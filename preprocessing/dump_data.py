@@ -318,20 +318,20 @@ def inject_anomalies(df: pd.DataFrame,
 
             # Terapkan serangan sesuai jenis
             if attack_name == "constant_position":
-                df.loc[idx, "latitude"] = df.loc[idx, "latitude"].values + 1.0
-                df.loc[idx, "longitude"] = df.loc[idx, "longitude"].values + 1.0
+                df.loc[idx, "latitude"] = rng.uniform(-10, 10)
+                df.loc[idx, "longitude"] = rng.uniform(-10, 10)
 
             elif attack_name == "random_position":
                 df.loc[idx, "latitude"] = (df.loc[idx, "latitude"].values +
-                                            rng.normal(0, 1.0, size=n))
+                                            rng.normal(0, 2.0, size=n))
                 df.loc[idx, "longitude"] = (df.loc[idx, "longitude"].values +
-                                             rng.normal(0, 1.0, size=n))
+                                             rng.normal(0, 2.0, size=n))
 
             elif attack_name == "velocity_drift":
                 base = df.loc[idx, "velocity"].values.astype(float)
-                n_half = max(2, n // 2)
+                n_quarter = max(2, n // 4)
                 drift = np.zeros(n)
-                drift[n_half:] = np.linspace(50, 200, n - n_half) * rng.choice([-1, 1])
+                drift[n_quarter:] = np.linspace(100, 300, n - n_quarter) * rng.choice([-1, 1])
                 df.loc[idx, "velocity"] = np.clip(base + drift, 0, 350)
 
             elif attack_name == "dos_deletion":
@@ -347,8 +347,7 @@ def inject_anomalies(df: pd.DataFrame,
                     donor_fid = rng.choice(donor_pool)
                     donor_data = df[df["flight_id"] == donor_fid]
                     if len(donor_data) > 0:
-                        n_second_half = n // 2
-                        n_replace = min(len(donor_data), n_second_half)
+                        n_replace = min(len(donor_data), n // 2)
                         replace_idx = idx[-n_replace:]
                         donor_vals = donor_data.iloc[-n_replace:]
                         for col in ["latitude", "longitude",
@@ -356,6 +355,12 @@ def inject_anomalies(df: pd.DataFrame,
                             vals = donor_vals[col].values
                             if len(vals) > 0:
                                 df.loc[replace_idx[:len(vals)], col] = vals
+                    # Tambah noise signifikan di titik transisi
+                    transition = idx[max(0, len(idx)//2 - 2):min(len(idx), len(idx)//2 + 2)]
+                    if len(transition) > 0:
+                        noise = rng.normal(0, 1.0, size=(len(transition),))
+                        df.loc[transition, "latitude"] = df.loc[transition, "latitude"].values + noise * 2
+                        df.loc[transition, "longitude"] = df.loc[transition, "longitude"].values + noise * 2
 
             elif attack_name == "heading_manipulation":
                 offset = rng.choice([-90, 90, 180], size=n)

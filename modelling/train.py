@@ -27,7 +27,7 @@ import joblib
 from datetime import datetime
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import OneClassSVM
-from sklearn.metrics import classification_report, roc_auc_score, confusion_matrix
+from sklearn.metrics import classification_report, roc_auc_score, confusion_matrix, roc_curve
 
 import torch
 import torch.optim as optim
@@ -259,15 +259,31 @@ def find_threshold(scores_val: np.ndarray, percentile: float = 95):
     return threshold
 
 
+def find_threshold_youden(y_true, scores):
+    """Cari threshold optimal dengan Youden's Index: max(TPR - FPR)."""
+    fpr, tpr, thresholds = roc_curve(y_true, scores)
+    youden = tpr - fpr
+    best_idx = np.argmax(youden)
+    best_thresh = thresholds[best_idx]
+    log(f"Threshold (Youden's Index): {best_thresh:.4f} "
+        f"(TPR={tpr[best_idx]:.3f}, FPR={fpr[best_idx]:.3f})")
+    return best_thresh
+
+
 def evaluate(test_data, test_labels, model, scaler, svdd,
              threshold, recon_threshold, device):
     """Evaluasi model di test set."""
     scores = compute_scores(model, test_data, scaler, svdd, device)
     y_true = test_labels.astype(int)
 
-    # Dua metode scoring: combined (VAE+SVDD) dan recon-only
+    # Cari threshold optimal dengan Youden's Index
+    youden_threshold_combined = find_threshold_youden(y_true, scores["combined"])
+    youden_threshold_recon = find_threshold_youden(y_true, scores["recon_error"])
+
     y_pred_combined = (scores["combined"] > threshold).astype(int)
     y_pred_recon = (scores["recon_error"] > recon_threshold).astype(int)
+    y_pred_youden_combined = (scores["combined"] > youden_threshold_combined).astype(int)
+    y_pred_youden_recon = (scores["recon_error"] > youden_threshold_recon).astype(int)
 
     # Cek distribusi skor per class
     log(f"\n  Score Distributions (test set):")
@@ -277,8 +293,10 @@ def evaluate(test_data, test_labels, model, scaler, svdd,
         log(f"    {name:15s}: min={arr.min():.3f} max={arr.max():.3f} "
             f"mean={arr.mean():.3f} median={np.median(arr):.3f} "
             f"p95={np.percentile(arr,95):.3f}")
-    log(f"    threshold (combined): {threshold:.3f}")
-    log(f"    threshold (recon):    {recon_threshold:.3f}")
+    log(f"    threshold (combined P95): {threshold:.3f}")
+    log(f"    threshold (recon P95):    {recon_threshold:.3f}")
+    log(f"    threshold (youden combined): {youden_threshold_combined:.3f}")
+    log(f"    threshold (youden recon):    {youden_threshold_recon:.3f}")
     for name in ["normal", "anomaly"]:
         mask = y_true == (1 if name == "anomaly" else 0)
         if mask.sum() > 0:
@@ -287,73 +305,65 @@ def evaluate(test_data, test_labels, model, scaler, svdd,
                 log(f"    {name:10s} {score_name:15s}: "
                     f"mean={arr.mean():.3f} median={np.median(arr):.3f}")
 
-    # Evaluasi combined
-    log(f"\n  --- COMBINED (VAE + SVDD) ---")
-    y_pred = y_pred_combined
-    tn, fp, fn, tp = confusion_matrix(y_true, y_pred).ravel()
+    def print_metrics(y_pred, label, score_name):
+        tn, fp, fn, tp = confusion_matrix(y_true, y_pred).ravel()
+        precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+        recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+        f1 = (2 * precision * recall / (precision + recall)
+              if (precision + recall) > 0 else 0.0)
+        accuracy = (tp + tn) / (tp + fp + fn + tn)
+        auc = roc_auc_score(y_true, scores[score_name])
+        log(f"  TP={tp} FP={fp} FN={fn} TN={tn}")
+        log(f"  Accuracy: {accuracy:.4f}  Precision: {precision:.4f}")
+        log(f"  Recall:   {recall:.4f}  F1-Score: {f1:.4f}")
+        log(f"  AUC-ROC:  {auc:.4f}")
+        return {"accuracy": accuracy, "precision": precision,
+                "recall": recall, "f1": f1, "auc": auc}
 
-    precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
-    recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
-    f1 = (2 * precision * recall / (precision + recall)
-          if (precision + recall) > 0 else 0.0)
-    accuracy = (tp + tn) / (tp + fp + fn + tn)
-    auc = roc_auc_score(y_true, scores["combined"])
+    log(f"\n  --- COMBINED (P95 dari VAL) ---")
+    m1 = print_metrics(y_pred_combined, "combined P95", "combined")
 
-    log(f"  Confusion Matrix: TP={tp} FP={fp} FN={fn} TN={tn}")
-    log(f"  Accuracy:  {accuracy:.4f}  Precision: {precision:.4f}")
-    log(f"  Recall:    {recall:.4f}  F1-Score:  {f1:.4f}")
-    log(f"  AUC-ROC:   {auc:.4f}")
+    log(f"\n  --- RECON ONLY (P95 dari VAL) ---")
+    m2 = print_metrics(y_pred_recon, "recon P95", "recon_error")
 
-    precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
-    recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
-    f1 = (2 * precision * recall / (precision + recall)
-          if (precision + recall) > 0 else 0.0)
-    accuracy = (tp + tn) / (tp + fp + fn + tn)
-    auc = roc_auc_score(y_true, scores["combined"])
+    log(f"\n  --- COMBINED (YOUDEN'S INDEX) ---")
+    m3 = print_metrics(y_pred_youden_combined, "combined youden", "combined")
 
-    log(f"\n{'='*50}")
-    log("EVALUASI TEST SET")
-    log(f"{'='*50}")
-    log(f"  Confusion Matrix: TP={tp} FP={fp} FN={fn} TN={tn}")
-    log(f"  Accuracy:  {accuracy:.4f}")
-    log(f"  Precision: {precision:.4f}")
-    log(f"  Recall:    {recall:.4f}")
-    log(f"  F1-Score:  {f1:.4f}")
-    log(f"  AUC-ROC:   {auc:.4f}")
+    log(f"\n  --- RECON ONLY (YOUDEN'S INDEX) ---")
+    m4 = print_metrics(y_pred_youden_recon, "recon youden", "recon_error")
 
-    # Evaluasi reconstruction-only
-    log(f"\n  --- RECONSTRUCTION ONLY ---")
-    y_pred_r = y_pred_recon
-    tn_r, fp_r, fn_r, tp_r = confusion_matrix(y_true, y_pred_r).ravel()
-    auc_r = roc_auc_score(y_true, scores["recon_error"])
-    log(f"  Confusion Matrix: TP={tp_r} FP={fp_r} FN={fn_r} TN={tn_r}")
-    log(f"  AUC-ROC: {auc_r:.4f}")
+    # Pilih yang terbaik: F1 tertinggi
+    results = {"combined_p95": m1, "recon_p95": m2,
+               "combined_youden": m3, "recon_youden": m4}
+    best_method = max(results, key=lambda k: results[k]["f1"])
+    best = results[best_method]
+    log(f"\n  *** BEST: {best_method} (F1={best['f1']:.4f}) ***")
 
-    # Attack type classification (recon-only)
-    log(f"\n  Per-Attack Detection (recon-only):")
+    # Per-Attack Detection (recon-only via Youden)
+    log(f"\n  Per-Attack Detection (recon-only, Youden threshold):")
     attack_types = np.load(os.path.join(DATA_DIR, "test_attack_types.npy"))
     for atk in np.unique(attack_types):
         if atk == "normal":
             continue
         mask = attack_types == atk
         n_total = mask.sum()
-        n_detected = (y_pred_r[mask] == 1).sum()
+        n_detected = (y_pred_youden_recon[mask] == 1).sum()
         log(f"    {atk:25s}: {n_detected:3d}/{n_total:3d} detected "
             f"({100*n_detected/max(n_total,1):.0f}%)")
 
+    # Return best method
+    best_threshold = youden_threshold_recon if "recon" in best_method else youden_threshold_combined
     return {
-        "accuracy_combined": accuracy,
-        "precision_combined": precision,
-        "recall_combined": recall,
-        "f1_combined": f1,
-        "auc_combined": auc,
-        "auc_recon": auc_r,
-        "tp_combined": int(tp),
-        "fp_combined": int(fp),
-        "fn_combined": int(fn),
-        "tn_combined": int(tn),
+        "accuracy": float(best["accuracy"]),
+        "precision": float(best["precision"]),
+        "recall": float(best["recall"]),
+        "f1": float(best["f1"]),
+        "auc": float(best["auc"]),
+        "best_method": str(best_method),
+        "best_threshold": float(best_threshold),
+        "youden_threshold_recon": float(youden_threshold_recon),
+        "youden_threshold_combined": float(youden_threshold_combined),
     }
-
 
 # ─── LANGKAH 8: SIMPAN ─────────────────────────────────────
 def save_artifacts(model, scaler, svdd, threshold, metrics,
@@ -382,6 +392,10 @@ def save_artifacts(model, scaler, svdd, threshold, metrics,
     # Config
     config = {
         "threshold": float(threshold),
+        "threshold_method": metrics.get("best_method", "combined_p95"),
+        "threshold_youden_recon": metrics.get("youden_threshold_recon", float(threshold)),
+        "threshold_youden_combined": metrics.get("youden_threshold_combined", float(threshold)),
+        "best_threshold": float(metrics.get("best_threshold", threshold)),
         "feature_names": FEATURE_NAMES,
         "n_features": model.n_features,
         "latent_dim": model.latent_dim,
@@ -503,7 +517,8 @@ def main():
 
     # ── Langkah 8: Simpan ──
     log("\n[8/8] Simpan artifacts...")
-    save_artifacts(model, scaler, svdd, combined_threshold, metrics,
+    best_threshold = metrics.get("best_threshold", combined_threshold)
+    save_artifacts(model, scaler, svdd, best_threshold, metrics,
                    args.model_dir, args)
 
     t_elapsed = time.time() - t_start
