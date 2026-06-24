@@ -6,6 +6,8 @@ __pycache__/
 # Data
 data/checkpoint/*.npy
 data/checkpoint/backup_pre_enhance/
+data/checkpoint_backup/
+scripts/reindex.lock
 
 # Credentials
 credentials.json

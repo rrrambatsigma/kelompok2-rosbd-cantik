@@ -1,9 +1,9 @@
 {
-  "threshold": 0.6515821218490601,
+  "threshold": 0.22827453911304474,
   "threshold_method": "recon_p95",
-  "threshold_youden_recon": 0.6515821218490601,
-  "threshold_youden_combined": 9.747522767782186,
-  "best_threshold": 0.6515821218490601,
+  "threshold_youden_recon": 0.22827453911304474,
+  "threshold_youden_combined": -24.72390956086747,
+  "best_threshold": 0.22827453911304474,
   "feature_names": [
     "latitude",
     "longitude",
@@ -26,5 +26,5 @@
   "svdd_nu": 0.05,
   "svdd_gamma": "auto",
   "threshold_percentile": 95,
-  "training_date": "2026-06-23T19:29:30.019703"
+  "training_date": "2026-06-23T23:39:02.068061"
 }
