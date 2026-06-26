@@ -1,0 +1,194 @@
+icao,lat,lon,airport_name,country
+DAAG,36.693886,3.214531,Houari Boumediene Airport,DZ
+EBFN,51.090302,2.65278,Koksijde Air Base,BE
+EBMB,50.913419,4.491005,Melsbroek Air Base,BE
+EBSP,50.482006,5.913434,Spa-La Sauvenière Airfield,BE
+EBZH,50.970375,5.375331,Kiewit Airfield Hasselt,BE
+EDCM,51.296944,14.1275,Kamenz Airfield,DE
+EDDB,52.361738,13.502341,Berlin Brandenburg Airport,DE
+EDDF,50.026706,8.55835,Frankfurt Main Airport,DE
+EDDH,53.630402,9.98823,Hamburg Helmut Schmidt Airport,DE
+EDDK,50.865898,7.14274,Cologne Bonn Airport,DE
+EDDL,51.289501,6.76678,Düsseldorf Airport,DE
+EDDM,48.353802,11.7861,Munich Airport,DE
+EDDS,48.689899,9.22196,Stuttgart Airport,DE
+EDDV,52.461102,9.68508,Hannover Airport,DE
+EDFE,49.96,8.643043,Frankfurt-Egelsbach Airport,DE
+EDFM,49.473057,8.514167,Mannheim-City Airport,DE
+EDKB,50.76889,7.163333,Bonn-Hangelar Airfield,DE
+EDKN,51.124168,7.373611,Wipperfürth-Neye Airfield,DE
+EDLM,51.647202,7.16333,Marl-Loemühle Airfield,DE
+EDLT,51.944745,7.773621,Münster-Telgte Airfield,DE
+EDMA,48.425278,10.931667,Augsburg Airport,DE
+EDML,48.512019,12.034865,Landshut Airfield,DE
+EDNA,48.263611,12.411667,Ampfing-Waldkraiburg Airfield,DE
+EDNY,47.671299,9.51149,Bodensee Airport Friedrichshafen,DE
+EDPM,48.678177,9.845909,Donzdorf Airfield,DE
+EDQX,49.642341,11.162574,Hetzleser Berg Airfield,DE
+EDRB,49.945278,6.565,Bitburg Airport,DE
+EDTG,47.903186,7.617416,Bremgarten Airfield,DE
+EDVM,52.179819,9.945803,Hildesheim Airfield,DE
+EDWJ,53.681421,7.056398,Juist Airport,DE
+EDWN,52.4575,7.182222,Flugplatz Nordhorn-Lingen,DE
+EDWU,52.908333,8.040556,Varrelbusch Airfield,DE
+EETN,59.413246,24.83264,Lennart Meri Tallinn Airport,EE
+EFHK,60.318363,24.963341,Helsinki Vantaa Airport,FI
+EFTP,61.414101,23.604401,Tampere-Pirkkala Airport,FI
+EGBB,52.453899,-1.74803,Birmingham Airport,GB
+EGBG,52.606574,-1.030226,Leicester Airport,GB
+EGBJ,51.894199,-2.16722,Gloucestershire Airport,GB
+EGCB,53.471699,-2.38972,Manchester Barton Aerodrome,GB
+EGCC,53.349375,-2.279521,Manchester Airport,GB
+EGCJ,53.788458,-1.216877,Sherburn-in-Elmet Airfield,GB
+EGCL,52.739201,-0.029722,Fenland Airfield,GB
+EGDM,51.152199,-1.74741,MoD Boscombe Down,GB
+EGDX,51.405229,-3.433254,MOD St Athan,GB
+EGGP,53.334863,-2.849637,Liverpool John Lennon Airport,GB
+EGHH,50.780483,-1.839576,Bournemouth Airport,GB
+EGHR,50.859832,-0.760073,Goodwood Aerodrome,GB
+EGKK,51.148744,-0.185739,London Gatwick Airport,GB
+EGKR,51.2136,-0.138611,Redhill Aerodrome,GB
+EGLC,51.505299,0.055278,London City Airport,GB
+EGLD,51.588299,-0.513056,Denham Aerodrome,GB
+EGLK,51.323898,-0.8475,Blackbushe Airport,GB
+EGLL,51.470748,-0.459909,London Heathrow Airport,GB
+EGLM,51.500801,-0.774444,White Waltham Airfield,GB
+EGNH,53.771702,-3.02861,Blackpool Airport,GB
+EGNU,53.980598,-0.864722,Full Sutton Airfield,GB
+EGNV,54.509201,-1.42941,Teesside International Airport,GB
+EGNX,52.8311,-1.32806,East Midlands Airport,GB
+EGOS,52.798199,-2.66804,RAF Shawbury,GB
+EGOV,53.2481,-4.53534,Anglesey Airport,GB
+EGPD,57.2019,-2.19778,Aberdeen International Airport,GB
+EGPF,55.871899,-4.43306,Glasgow Airport,GB
+EGPH,55.950145,-3.372288,Edinburgh Airport,GB
+EGQL,56.37398,-2.868862,Leuchars Station Airfield,GB
+EGSH,52.6758,1.28278,Norwich Airport,GB
+EGSS,51.884998,0.235,London Stansted Airport,GB
+EGTB,51.61177,-0.808316,Wycombe Air Park,GB
+EGTC,52.072201,-0.616667,Cranfield Airport,GB
+EGTK,51.836899,-1.32,London Oxford Airport,GB
+EGTR,51.6558,-0.325833,Elstree Airfield,GB
+EGUB,51.614366,-1.095991,RAF Benson,GB
+EGVN,51.75,-1.58362,RAF Brize Norton,GB
+EGWC,52.640524,-2.305326,RAF Cosford,GB
+EGWN,51.790699,-0.737972,RAF Halton,GB
+EGXT,52.612598,-0.476453,RAF Wittering,GB
+EGXY,53.0228,-0.911111,RAF Syerston,GB
+EGYD,53.027308,-0.493104,RAF Cranwell,GB
+EHAM,52.308601,4.76389,Amsterdam Airport Schiphol,NL
+EHGG,53.119107,6.577652,Groningen Airport Eelde,NL
+EHLE,52.453188,5.514622,Lelystad Airport,NL
+EHMZ,51.512199,3.73111,Midden-Zeeland Airfield,NL
+EHRD,51.956902,4.43722,Rotterdam The Hague Airport,NL
+EHSE,51.554901,4.553003,Breda International Airport,NL
+EHTE,52.242764,6.050004,Teuge Airport,NL
+EHTL,52.057201,5.92444,Terlet Glidersite,NL
+EHTW,52.275833,6.889167,Twente Airport,NL
+EHWO,51.4491,4.34203,Woensdrecht Air Base,NL
+EIDW,53.428713,-6.262121,Dublin Airport,IE
+EKCH,55.617900848389,12.656000137329,Copenhagen Kastrup Airport,DK
+EKRK,55.585602,12.1314,Copenhagen Roskilde Airport,DK
+EKYT,57.094763,9.84993,Aalborg Airport,DK
+ENBO,67.269203,14.3653,Bodø Airport,NO
+ENBR,60.2934,5.21814,"Bergen Airport, Flesland",NO
+ENGK,58.516701,8.7,"Arendal Airfield, Gullknapp",NO
+ENGM,60.193901,11.1004,Oslo-Gardermoen International Airport,NO
+ENVA,63.457802,10.924,"Trondheim Airport, Værnes",NO
+ENZV,58.876701,5.63778,"Stavanger Airport, Sola",NO
+EPBC,52.269199,20.907203,Warsaw Babice Airport,PL
+EPGL,50.268743,18.672466,Gliwice-Trynek Airfield,PL
+EPKP,50.08644,20.200253,Pobiednik Wielki Airfield,PL
+EPKR,49.683807,21.740953,Krosno Airfield,PL
+EPML,50.3223,21.462099,Mielec Airfield,PL
+EPPO,52.421598,16.823359,Poznań-Ławica Airport,PL
+EPRJ,50.104169,22.047029,Rzeszów Sports Airfield,PL
+EPWA,52.165699,20.9671,Warsaw Chopin Airport,PL
+EPWS,51.2061,16.9986,Wrocław-Szymanów Airfield,PL
+ESSA,59.64849,17.928829,Stockholm-Arlanda Airport,SE
+ESSB,59.354401,17.9417,Stockholm-Bromma Airport,SE
+ETHN,49.39162,9.956747,Niederstetten Army Air Base,DE
+EYVP,54.479745,24.9898,Paluknys Airfield,LT
+KJFK,40.639447,-73.779317,John F. Kennedy International Airport,US
+KLAX,33.942501,-118.407997,Los Angeles International Airport,US
+KORD,41.9786,-87.9048,Chicago O'Hare International Airport,US
+LCEN,35.153064,33.507352,Ercan International Airport,CY
+LCLK,34.875099,33.624901,Larnaca International Airport,CY
+LEAL,38.2822,-0.558156,Alicante-Elche Miguel Hernández Airport,ES
+LEBG,42.357601,-3.62076,Burgos Airport,ES
+LEBL,41.2971,2.07846,Josep Tarradellas Barcelona-El Prat Airport,ES
+LECU,40.370701,-3.78514,Madrid-Cuatro Vientos Airport,ES
+LEIB,38.872898,1.37312,Ibiza Airport,ES
+LELL,41.520901,2.10508,Sabadell Airfield,ES
+LEMD,40.493407,-3.572249,Adolfo Suárez Madrid–Barajas Airport,ES
+LEMG,36.6749,-4.49911,Málaga-Costa del Sol Airport,ES
+LEMH,39.862598,4.21865,Menorca Airport,ES
+LEMS,41.765301,1.86167,Manresa Airfield,ES
+LEPA,39.551701,2.73881,Palma de Mallorca Airport,ES
+LFBD,44.82865,-0.715356,Bordeaux–Mérignac Airport,FR
+LFBO,43.629101,1.36382,Toulouse-Blagnac Airport,FR
+LFCL,43.58677,1.49924,Toulouse-Lasbordes Airfield,FR
+LFLU,44.9216,4.9699,Valence-Chabeuil Airport,FR
+LFMA,43.506294,5.366426,Aix Les Milles airport,FR
+LFML,43.438088,5.2125,Marseille Provence Airport,FR
+LFMN,43.658401,7.21587,Nice-Côte d'Azur Airport,FR
+LFPG,49.00896,2.554117,Charles de Gaulle International Airport,FR
+LFPL,48.821028,2.625967,Lognes Emerainville Airfield,FR
+LFPN,48.7519,2.10619,Toussus-le-Noble Airport,FR
+LFPO,48.729499,2.358963,Paris-Orly Airport,FR
+LFPZ,48.812459,2.067533,Saint-Cyr-l'École Airport,FR
+LFQO,50.687199,3.07556,Marcq-en-Baroeul Airfield,FR
+LFRE,47.289398,-2.34639,La Baule-Escoublac Airport,FR
+LFRV,47.723301,-2.71856,Vannes-Meucon Airport,FR
+LGAV,37.936401,23.9445,Athens Eleftherios Venizelos International Airport,GR
+LGTS,40.51928,22.970009,Thessaloniki Macedonia International Airport,GR
+LGTT,38.108898,23.7838,Tatoi Airport,GR
+LICJ,38.175999,13.091,Falcone–Borsellino Airport,IT
+LICZ,37.401699,14.9224,Sigonella Navy Air Base,IT
+LIMC,45.6306,8.72811,Milan Malpensa International Airport,IT
+LIML,45.445099,9.27674,Milano Linate Airport,IT
+LIPN,45.472,10.9279,Verona-Boscomantico Airfield,IT
+LIRF,41.804532,12.251998,Rome–Fiumicino Leonardo da Vinci International Airport,IT
+LIRU,41.952096,12.502231,Rome Urbe Airport,IT
+LJPZ,45.47201,13.615951,Portorož Airport,SI
+LKHK,50.253201,15.8452,Hradec Králové Airport,CZ
+LKLT,50.131401,14.5256,Letňany Airfield,CZ
+LKPD,50.015049,15.73981,Pardubice Airport,CZ
+LOAN,47.8433,16.260099,Wiener Neustadt East Airport,AT
+LOGG,47.146654,16.317058,Punitz-Güssing Airfield,AT
+LOGW,47.170293,15.664468,Weiz-Unterfladnitz Airfield,AT
+LOLF,48.513748,14.406579,Freistadt Airfield,AT
+LOWG,46.9911,15.4396,Graz Airport,AT
+LOWS,47.793301,13.0043,Salzburg Airport,AT
+LOWW,48.110298,16.5697,Vienna International Airport,AT
+LOXN,47.836933,16.221838,Wiener Neustadt West Airport,AT
+LPBJ,38.078899,-7.9324,Beja Airport / Airbase,PT
+LPEV,38.533501,-7.88964,Évora Airfield,PT
+LPFR,37.015909,-7.970939,Faro - Gago Coutinho International Airport,PT
+LPMA,32.697812,-16.774613,Cristiano Ronaldo International Airport,PT
+LPPR,41.2481002808,-8.68138980865,Francisco de Sá Carneiro Airport,PT
+LPPT,38.7813,-9.13592,Lisbon Humberto Delgado Airport,PT
+LPSO,39.211545,-8.057787,Aeródromo Municipal de Ponte de Sor,PT
+LSGG,46.238098,6.10895,Geneva International Airport,CH
+LSGL,46.54509,6.616629,Lausanne la Blécherette Airport,CH
+LSMA,46.943901,8.28417,Alpnach Air Base,CH
+LSPA,47.573983,9.047785,Amlikon Airfield,CH
+LSZB,46.912736,7.498819,Bern Airport,CH
+LSZC,46.974444,8.396944,Buochs Airport,CH
+LSZH,47.458056,8.548056,Zürich Airport,CH
+LSZI,47.5089,7.95,Fricktal-Schupfart Airfield,CH
+LSZL,46.162535,8.878908,Locarno Airport,CH
+LSZO,47.188993,8.204556,Luzern-Beromünster Airfield,CH
+LSZR,47.485001,9.56077,Sankt Gallen Altenrhein Airport,CH
+LSZV,47.5089,9.26278,Sitterdorf Airfield,CH
+LSZX,47.1717,9.03944,Schänis Airfield,CH
+LTAI,36.898701,30.800501,Antalya International Airport,TR
+LTBW,41.1036,28.547701,İstanbul Hezarfen Airfield,TR
+LTCG,40.995098,39.7897,Trabzon International Airport,TR
+LTFE,37.249314,27.66401,Milas Bodrum International Airport,TR
+LTFJ,40.898602,29.3092,Istanbul Sabiha Gökçen International Airport,TR
+LTFM,41.274874,28.732136,İstanbul Airport,TR
+OMDB,25.24979,55.370992,Dubai International Airport,AE
+SKBO,4.70159,-74.1469,El Dorado International Airport,CO
+UG11,40.8876,45.957001,Dollyar Air Base,AZ
+WSSS,1.35019,103.994003,Singapore Changi Airport,SG

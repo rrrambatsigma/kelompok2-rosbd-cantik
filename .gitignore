@@ -1,2 +1,13 @@
+# sudah ada
 .env
-venv
+venv/
+
+# tambahin
+config/credentials.json
+data/raw/
+data/historical/
+data/processed/
+data/final/eta_training_merged.parquet
+models/eta_xgboost_model.pkl
+__pycache__/
+*.pyc
