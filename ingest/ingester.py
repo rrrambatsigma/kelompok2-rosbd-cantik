@@ -11,7 +11,7 @@ warnings.filterwarnings("ignore")
 
 KAFKA_BOOTSTRAP = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "kafka:9092")
 TOPIC           = "flights"
-INTERVAL        = 5
+INTERVAL        = 10
 
 BOUNDING_BOX = {
     "lamin": 34.5,
@@ -136,16 +136,24 @@ def parse_state(state: list) -> dict:
 
 
 def fetch_flights(token_manager: TokenManager) -> list:
+    headers = token_manager.auth_headers()
     resp = requests.get(
         "https://opensky-network.org/api/states/all",
         params=BOUNDING_BOX,
-        headers=token_manager.auth_headers(),
+        headers=headers,
         timeout=15,
     )
     if resp.status_code == 429:
-        print("[FETCH] Rate limited, wait 60s")
-        time.sleep(60)
-        return []
+        print("[FETCH] Auth rate limited, retry without auth")
+        resp = requests.get(
+            "https://opensky-network.org/api/states/all",
+            params=BOUNDING_BOX,
+            timeout=15,
+        )
+        if resp.status_code == 429:
+            print("[FETCH] Still rate limited without auth, wait 60s")
+            time.sleep(60)
+            return []
     if resp.status_code == 401:
         print("[FETCH] Token invalid, force refresh")
         token_manager.token = None

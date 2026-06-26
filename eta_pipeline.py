@@ -10,7 +10,8 @@ from elasticsearch import Elasticsearch
 # =========================
 # CONFIG
 # =========================
-ES_HOST = "http://100.99.130.69:9200"
+# ES_HOST = os.getenv("ES_HOST", "http://100.99.130.69:9200")
+ES_HOST = os.getenv("ES_HOST", "http://localhost:9200")
 INDEX_NAME = "flights"
 
 AIRPORT_FILE = "data/final/airport_lookup.csv"
@@ -291,9 +292,15 @@ def predict_eta(lat, lon, destination, speed_kmh, alt, hdg, elapsed_seconds=None
 # =========================
 
 def to_native(obj):
+    if obj is None:
+        return None
+    if isinstance(obj, float) and (obj != obj or obj == float('inf') or obj == float('-inf')):
+        return None
     if isinstance(obj, (np.integer,)):
         return int(obj)
     if isinstance(obj, (np.floating,)):
+        if np.isnan(obj) or np.isinf(obj):
+            return None
         return float(obj)
     if isinstance(obj, np.ndarray):
         return obj.tolist()

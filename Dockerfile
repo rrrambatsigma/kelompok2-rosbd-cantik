@@ -14,5 +14,7 @@ COPY modelling/ ./modelling/
 COPY serving/ ./serving/
 COPY scripts/ ./scripts/
 COPY models/ ./models/
+COPY eta_scheduler.py .
+COPY eta_pipeline.py .
 
 CMD ["python", "-u", "ingest/ingester.py"]

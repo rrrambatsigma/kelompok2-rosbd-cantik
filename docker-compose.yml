@@ -19,7 +19,7 @@ services:
       ZOOKEEPER_TICK_TIME: 2000
     volumes:
       - zookeeper-data:/var/lib/zookeeper/data
-      - zookeeper-data:/var/lib/zookeeper/log
+     # - zookeeper-data:/var/lib/zookeeper/log
     networks:
       - flight-net
 
@@ -205,5 +205,19 @@ services:
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
     command: ["python", "-u", "ingest/saver.py"]
+    networks:
+      - flight-net
+
+  eta-scheduler:
+    build: .
+    container_name: eta-scheduler
+    depends_on:
+      - elasticsearch
+    environment:
+      - ES_HOST=http://elasticsearch:9200
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models
+    command: ["python", "-u", "eta_scheduler.py"]
     networks:
       - flight-net
