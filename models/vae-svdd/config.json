@@ -1,0 +1,30 @@
+{
+  "threshold": 0.22827453911304474,
+  "threshold_method": "recon_p95",
+  "threshold_youden_recon": 0.22827453911304474,
+  "threshold_youden_combined": -24.72390956086747,
+  "best_threshold": 0.22827453911304474,
+  "feature_names": [
+    "latitude",
+    "longitude",
+    "velocity",
+    "baro_altitude",
+    "true_track",
+    "dlat",
+    "dlon",
+    "dvel",
+    "dalt",
+    "dtrack"
+  ],
+  "n_features": 10,
+  "latent_dim": 16,
+  "window_size": 10,
+  "hidden_dim": 64,
+  "vae_epochs": 300,
+  "vae_lr": 0.001,
+  "vae_beta": 0.001,
+  "svdd_nu": 0.05,
+  "svdd_gamma": "auto",
+  "threshold_percentile": 95,
+  "training_date": "2026-06-23T23:39:02.068061"
+}

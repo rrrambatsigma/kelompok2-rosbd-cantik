@@ -5,26 +5,25 @@ import requests
 from datetime import datetime, timedelta
 from kafka import KafkaProducer
 from kafka.errors import NoBrokersAvailable
-from elasticsearch import Elasticsearch 
+from elasticsearch import Elasticsearch
 import warnings
-warnings.filterwarnings("ignore")  
+warnings.filterwarnings("ignore")
 
 KAFKA_BOOTSTRAP = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "kafka:9092")
 TOPIC           = "flights"
 INTERVAL        = 5
 
 BOUNDING_BOX = {
-    "lamin": 34.5,   
-    "lomin": -10.0,  
-    "lamax": 71.0,   
-    "lomax": 40.0    
+    "lamin": 34.5,
+    "lomin": -10.0,
+    "lamax": 71.0,
+    "lomax": 40.0
 }
 
 TOKEN_URL            = "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token"
 TOKEN_REFRESH_MARGIN = 30
-CREDENTIALS_FILE     = os.getenv("CREDENTIALS_FILE", "credentials.json")
+CREDENTIALS_FILE     = os.getenv("CREDENTIALS_FILE", "/app/credentials.json")
 
-# Elasticsearch
 ES_HOST = os.getenv("ELASTICSEARCH_HOST", "elasticsearch:9200")
 es = Elasticsearch(f"http://{ES_HOST}")
 
@@ -94,7 +93,6 @@ def connect_kafka(bootstrap: str) -> KafkaProducer:
 
 
 def preprocess_and_save(flight_dict: dict) -> None:
-    """Preprocessing dan simpan ke Elasticsearch."""
     if not flight_dict.get("callsign"):
         return
     if flight_dict.get("longitude") is None or flight_dict.get("latitude") is None:
@@ -107,10 +105,8 @@ def preprocess_and_save(flight_dict: dict) -> None:
     else:
         flight_dict["velocity_kmh"] = None
 
-    # Filter altitude tidak wajar (misal > 20km)
     if flight_dict.get("geo_altitude") and flight_dict["geo_altitude"] > 20000:
         flight_dict["geo_altitude"] = None
-
 
     try:
         es.index(index="flights", document=flight_dict)
@@ -119,7 +115,6 @@ def preprocess_and_save(flight_dict: dict) -> None:
 
 
 def parse_state(state: list) -> dict:
-    """Konversi list state OpenSky → dict flight."""
     return {
         "icao24":         state[0],
         "callsign":       state[1].strip() if state[1] else None,
@@ -183,9 +178,7 @@ def main():
                 count = 0
                 for state in states:
                     flight = parse_state(state)
-                    # Kirim ke Kafka
                     producer.send(TOPIC, flight)
-                    # Preprocess & simpan ke Elasticsearch
                     preprocess_and_save(flight.copy())
                     count += 1
                 producer.flush()

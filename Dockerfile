@@ -5,7 +5,14 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY *.py .
+# PyTorch CPU-only (versi sesuai local: 2.12.1)
+RUN pip install --no-cache-dir torch --extra-index-url https://download.pytorch.org/whl/cpu
 
-# Tambah -u supaya output tidak di-buffer
-CMD ["python", "-u", "ingester.py"]
+COPY ingest/ ./ingest/
+COPY preprocessing/ ./preprocessing/
+COPY modelling/ ./modelling/
+COPY serving/ ./serving/
+COPY scripts/ ./scripts/
+COPY models/ ./models/
+
+CMD ["python", "-u", "ingest/ingester.py"]

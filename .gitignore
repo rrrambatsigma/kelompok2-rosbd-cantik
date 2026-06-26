@@ -1,6 +1,32 @@
 # sudah ada
 .env
-venv/
+venv
+__pycache__/
+*.pyc
+
+# Data
+data/checkpoint/*.npy
+data/checkpoint/backup_pre_enhance/
+data/checkpoint_backup/
+scripts/reindex.lock
+
+# Credentials
+credentials.json
+
+# Old model files (deprecated naming)
+models/vae-svdd/vae.pt
+models/vae-svdd/svdd.joblib
+models/vae-svdd/scaler.joblib
+
+# Model artifacts - binary files (regeneratable by train.py)
+models/vae-svdd/vae_model.pt
+models/vae-svdd/svdd_model.pkl
+models/vae-svdd/scaler.pkl
+
+# Logs
+logs/
+reindex.log
+reindex_error.log/
 
 # tambahin
 config/credentials.json

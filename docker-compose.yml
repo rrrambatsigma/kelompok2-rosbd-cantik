@@ -75,6 +75,7 @@ services:
     networks:
       - flight-net
 
+  # ES lokal - untuk sistem Kibana & service ingester/optimizer/anomaly/saver
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
     container_name: elasticsearch
@@ -82,23 +83,32 @@ services:
       - discovery.type=single-node
       - xpack.security.enabled=false
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      # Aktifkan Cross-Cluster Search ke ES teman via Tailscale
+      - cluster.remote.teman.seeds=100.99.130.69:9300
+      - reindex.remote.whitelist=100.99.130.69:9200
     ports:
       - "9200:9200"
+      - "9300:9300"
     volumes:
       - elasticsearch-data:/usr/share/elasticsearch/data
+    extra_hosts:
+      - "host-gateway:host-gateway"
     networks:
       - flight-net
 
-  # Kibana diarahkan ke Elasticsearch teman via Tailscale (100.99.130.69)
+  # Kibana pakai ES LOKAL (supaya index sistem .kibana tersedia)
+  # Data teman diakses via Cross-Cluster Search dari Kibana: teman:nama_index
   kibana:
     image: docker.elastic.co/kibana/kibana:8.11.0
     container_name: kibana
     ports:
       - "5601:5601"
     environment:
-      - ELASTICSEARCH_HOSTS=http://100.99.130.69:9200
-    extra_hosts:
-      - "host-gateway:host-gateway"
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - TELEMETRY_ENABLED=false
+      - LOGGING_VERBOSE=true
+    depends_on:
+      - elasticsearch
     networks:
       - flight-net
 
@@ -109,10 +119,15 @@ services:
       - "3000:3000"
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
     volumes:
       - grafana-data:/var/lib/grafana
+      - ./grafana-provisioning/datasources:/etc/grafana/provisioning/datasources
+      - ./grafana-provisioning/dashboards:/etc/grafana/provisioning/dashboards
     networks:
       - flight-net
+    depends_on:
+      - elasticsearch
 
   ingester:
     build: .
@@ -128,7 +143,7 @@ services:
       - ELASTICSEARCH_HOST=elasticsearch:9200
     volumes:
       - ./credentials.json:/app/credentials.json
-    command: ["python", "-u", "ingester.py"]
+    command: ["python", "-u", "ingest/ingester.py"]
     networks:
       - flight-net
 
@@ -141,7 +156,22 @@ services:
       - elasticsearch
     environment:
       - ELASTICSEARCH_HOST=elasticsearch:9200
-    command: ["uvicorn", "optimizer:app", "--host", "0.0.0.0", "--port", "8000"]
+    command: ["uvicorn", "ingest.optimizer:app", "--host", "0.0.0.0", "--port", "8000"]
+    networks:
+      - flight-net
+
+  vae-serving:
+    build: .
+    container_name: vae-serving
+    ports:
+      - "8001:8001"
+    depends_on:
+      - elasticsearch
+    environment:
+      - ELASTICSEARCH_HOST=elasticsearch:9200
+    volumes:
+      - ./models:/app/models
+    command: ["uvicorn", "serving.api:app", "--host", "0.0.0.0", "--port", "8001"]
     networks:
       - flight-net
 
@@ -151,10 +181,12 @@ services:
     depends_on:
       - kafka
       - elasticsearch
+      - vae-serving
     environment:
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - ELASTICSEARCH_HOST=elasticsearch:9200
-    command: ["python", "anomaly.py"]
+      - SERVING_URL=http://vae-serving:8001
+    command: ["python", "serving/detector.py"]
     networks:
       - flight-net
 
@@ -170,8 +202,8 @@ services:
     environment:
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - ELASTICSEARCH_HOST=elasticsearch:9200
-      - TELEGRAM_BOT_TOKEN=8728781688:AAGpad63jzYWEDDfi5i22SOIDIRcVeoDqCE
-      - TELEGRAM_CHAT_ID=7587791731
-    command: ["python", "-u", "saver.py"]
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+    command: ["python", "-u", "ingest/saver.py"]
     networks:
       - flight-net
