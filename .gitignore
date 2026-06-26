@@ -1,3 +1,4 @@
+# sudah ada
 .env
 venv
 __pycache__/
@@ -25,4 +26,14 @@ models/vae-svdd/scaler.pkl
 # Logs
 logs/
 reindex.log
-reindex_error.log
+reindex_error.log/
+
+# tambahin
+config/credentials.json
+data/raw/
+data/historical/
+data/processed/
+data/final/eta_training_merged.parquet
+models/eta_xgboost_model.pkl
+__pycache__/
+*.pyc
