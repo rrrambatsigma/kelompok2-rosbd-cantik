@@ -37,8 +37,11 @@ OpenSky API → ingester → Kafka → serving/detector → vae-serving (VAE-SVD
 │   ├── spark_pipeline.py         (PySpark + Elasticsearch pipeline)
 │   └── attack_generator.py       (6 synthetic attack types)
 ├── modelling/                    ← Model training & core
-│   ├── vae_svdd.py               (VAE + SVDD: PyTorch + sklearn)
-│   └── train.py                  (Training orchestrator)
+│   ├── anomaly/                  (Deteksi anomali)
+│   │   ├── train.py              (Training orchestrator)
+│   │   ├── vae_lstm.py           (VAE-LSTM: PyTorch + LSTM)
+│   │   └── vae_svdd.py           (VAE-SVDD: PyTorch + sklearn)
+│   └── eta/                      (Prediksi ETA — upcoming)
 ├── serving/                      ← Serving & detection
 │   ├── api.py                    (FastAPI inference server)
 │   └── detector.py               (Kafka consumer → serving API)
@@ -93,7 +96,7 @@ Build image & jalankan training:
 
 ```bash
 docker-compose build vae-serving
-docker-compose run --rm vae-serving python -m modelling.train \
+docker-compose run --rm vae-serving python -m modelling.anomaly.train \
     --max-samples 50000 \
     --vae-epochs 200 \
     --latent-dim 4 \
@@ -225,7 +228,7 @@ docker-compose logs zookeeper
 **Problem:** Serving API mengembalikan 503
 ```bash
 # Model belum di-train. Jalankan training dulu:
-docker-compose run --rm vae-serving python -m modelling.train
+docker-compose run --rm vae-serving python -m modelling.anomaly.train
 ```
 
 **Problem:** Tidak ada data di Elasticsearch

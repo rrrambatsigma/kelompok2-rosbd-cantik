@@ -63,7 +63,7 @@ def load_model():
     with open(config_path) as f:
         config = json.load(f)
 
-    from modelling.vae_lstm import VAELSTM
+    from modelling.anomaly.vae_lstm import VAELSTM
     checkpoint = torch.load(vae_path, map_location="cpu")
     vae = VAELSTM(
         n_features=checkpoint["input_dim"],

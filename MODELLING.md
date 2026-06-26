@@ -406,7 +406,7 @@ ls -lh models/vae-svdd/
 # Test load model
 python -c "
 import torch
-from modelling.vae_lstm import VAE
+from modelling.anomaly.vae_lstm import VAELSTM
 model = VAE()
 checkpoint = torch.load('models/vae-svdd/vae_model.pt')
 model.load_state_dict(checkpoint['model_state_dict'])

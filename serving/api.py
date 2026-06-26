@@ -13,7 +13,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from elasticsearch import Elasticsearch
 
-from modelling.vae_lstm import VAELSTM
+from modelling.anomaly.vae_lstm import VAELSTM
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 MODEL_DIR = os.path.join(BASE_DIR, "models", "vae-svdd")

@@ -33,7 +33,7 @@ import torch
 import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
 
-from modelling.vae_lstm import VAELSTM, vae_loss, EarlyStopping, FEATURE_NAMES
+from modelling.anomaly.vae_lstm import VAELSTM, vae_loss, EarlyStopping, FEATURE_NAMES
 
 # ─── KONFIGURASI ────────────────────────────────────────────
 DATA_DIR = os.path.join("data", "checkpoint")
