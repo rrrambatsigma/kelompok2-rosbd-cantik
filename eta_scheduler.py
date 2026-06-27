@@ -9,7 +9,7 @@ from elasticsearch import Elasticsearch, NotFoundError
 from eta_pipeline import predict, get_trajectory
 
 # ES_HOST = os.getenv("ES_HOST", "http://100.99.130.69:9200")
-ES_HOST = os.getenv("ES_HOST", "http://localhost:9200")
+ES_HOST = os.getenv("ES_HOST", "http://127.0.0.1:9200")
 ES_INDEX = "flights"
 PRED_INDEX = "flight_predictions"
 POLL_INTERVAL = 30
@@ -48,12 +48,7 @@ def ensure_index():
 def get_active_flights(last_check):
     query = {
         "query": {
-            "bool": {
-                "must": [
-                    {"term": {"on_ground": False}},
-                    {"range": {"last_contact": {"gte": last_check}}}
-                ]
-            }
+            "term": {"on_ground": False}
         },
         "aggs": {
             "flights": {
@@ -116,7 +111,7 @@ def run_once(last_check):
         if flight["points"] < MIN_TRACK_POINTS:
             return ("skipped", icao24, None)
         existing = get_existing_prediction(icao24)
-        if existing and existing.get("status") in ("landed", "failed"):
+        if existing and existing.get("status") == "landed":
             return ("skipped", icao24, None)
         try:
             result = predict(icao24)

@@ -94,3 +94,8 @@ prefect_orion.db
 # ==========================
 elasticsearch/
 grafana/
+
+# Runtime logs
+*_out.txt
+*_err.txt
+*_debug.txt

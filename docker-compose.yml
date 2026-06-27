@@ -82,7 +82,7 @@ services:
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - "ES_JAVA_OPTS=-Xms2g -Xmx2g"
       # Aktifkan Cross-Cluster Search ke ES teman via Tailscale
       - cluster.remote.teman.seeds=100.99.130.69:9300
       - reindex.remote.whitelist=100.99.130.69:9200
@@ -205,6 +205,19 @@ services:
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
     command: ["python", "-u", "ingest/saver.py"]
+    networks:
+      - flight-net
+
+  eta-consumer:
+    build: .
+    container_name: eta-consumer
+    depends_on:
+      - kafka
+      - elasticsearch
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - ELASTICSEARCH_HOST=elasticsearch:9200
+    command: ["python", "-u", "serving/eta_consumer.py"]
     networks:
       - flight-net
 
