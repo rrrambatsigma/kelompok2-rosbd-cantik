@@ -1,0 +1,32 @@
+{
+  "threshold": 2.8,
+  "threshold_method": "recon_p95_real_data",
+  "threshold_youden_recon": 0.22827453911304474,
+  "threshold_youden_combined": -24.72390956086747,
+  "best_threshold": 2.8,
+  "feature_names": [
+    "latitude",
+    "longitude",
+    "velocity",
+    "baro_altitude",
+    "true_track",
+    "dlat",
+    "dlon",
+    "dvel",
+    "dalt",
+    "dtrack"
+  ],
+  "n_features": 10,
+  "latent_dim": 16,
+  "window_size": 10,
+  "hidden_dim": 64,
+  "vae_epochs": 300,
+  "vae_lr": 0.001,
+  "vae_beta": 0.001,
+  "svdd_nu": 0.05,
+  "svdd_gamma": "auto",
+  "threshold_percentile": 95,
+  "training_date": "2026-06-23T23:39:02.068061",
+  "calibration_date": "2026-06-26T17:39:30.000000",
+  "calibration_notes": "Threshold dinaikkan dari 0.228 ke 2.8 (P95 data real ADS-B flight 4cae7d, 539 windows)"
+}

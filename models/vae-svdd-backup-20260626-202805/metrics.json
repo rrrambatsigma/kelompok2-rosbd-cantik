@@ -1,0 +1,11 @@
+{
+  "accuracy": 0.9487247188044569,
+  "precision": 0.8970189701897019,
+  "recall": 0.9358543912352005,
+  "f1": 0.9160252529620341,
+  "auc": 0.9810218104018406,
+  "best_method": "recon_p95",
+  "best_threshold": 0.22827453911304474,
+  "youden_threshold_recon": 0.22827453911304474,
+  "youden_threshold_combined": -24.72390956086747
+}

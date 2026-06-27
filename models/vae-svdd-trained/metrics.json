@@ -1,0 +1,48 @@
+{
+  "accuracy": 0.6471462239983605,
+  "precision": 0.5200243179572915,
+  "recall": 0.9229835446452657,
+  "f1": 0.6652408496573179,
+  "auc": 0.7760201756523938,
+  "best_method": "weighted_f1max",
+  "confusion_matrix": {
+    "tp": 6843,
+    "fp": 6316,
+    "fn": 571,
+    "tn": 5788
+  },
+  "per_attack": {
+    "constant_position": {
+      "total_windows": 1561,
+      "detected": 1345,
+      "recall": 0.8616271620755925
+    },
+    "dos_deletion": {
+      "total_windows": 975,
+      "detected": 975,
+      "recall": 1.0
+    },
+    "flight_merge": {
+      "total_windows": 975,
+      "detected": 975,
+      "recall": 1.0
+    },
+    "heading_manipulation": {
+      "total_windows": 1171,
+      "detected": 1060,
+      "recall": 0.9052092228864219
+    },
+    "random_position": {
+      "total_windows": 1561,
+      "detected": 1331,
+      "recall": 0.8526585522101218
+    },
+    "velocity_drift": {
+      "total_windows": 1171,
+      "detected": 1157,
+      "recall": 0.9880444064901793
+    }
+  },
+  "global_threshold": 0.5048878788948059,
+  "f1max_threshold": 0.03182750940322876
+}

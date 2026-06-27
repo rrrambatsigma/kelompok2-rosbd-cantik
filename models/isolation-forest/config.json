@@ -1,0 +1,10 @@
+{
+  "model": "IsolationForest",
+  "n_estimators": 100,
+  "contamination": "auto",
+  "max_samples": "auto",
+  "threshold": -0.09494636032717557,
+  "f1max_threshold": -0.09494636032717557,
+  "feature_dim": 100,
+  "training_date": "2026-06-27T16:25:08.143602"
+}

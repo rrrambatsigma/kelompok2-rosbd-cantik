@@ -1,13 +1,13 @@
 """
-batch_es.py — Batch processing 7,7 juta data dari ES teman
-Tanpa HTTP ke serving API — model di-load langsung di sini
+batch_es.py — Batch processing data dari ES Meiva (v3)
+VAE-LSTM only (tanpa SVDD). Threshold F1-max dari training.
 
 Alur:
-  1. Fetch semua data dari ES teman via scroll API
+  1. Fetch semua data dari ES Meiva via scroll API
   2. Cleaning & segmentasi flight
   3. Sliding window (size=10, stride=5)
-  4. Load model (VAE-LSTM + SVDD + Scaler)
-  5. Infer semua window
+  4. Load VAE-LSTM v3 + Scaler
+  5. Infer semua window → recon_error > threshold
   6. Simpan hasil ke ES anomaly-stream
   7. Buka Grafana → data langsung muncul
 """
@@ -28,7 +28,7 @@ REMOTE_ES = os.getenv("REMOTE_ES", "http://100.99.130.69:9200")
 REMOTE_INDEX = os.getenv("REMOTE_INDEX", "flights")
 LOCAL_ES = os.getenv("LOCAL_ES", "http://localhost:9200")
 ANOMALY_INDEX = "anomaly-stream"
-MODEL_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "models", "vae-svdd")
+MODEL_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "models", "vae-svdd-trained")
 
 WINDOW_SIZE = 10
 STRIDE = 5
@@ -57,7 +57,6 @@ def load_model():
     log(f"Loading model from {MODEL_DIR}...")
     config_path = os.path.join(MODEL_DIR, "config.json")
     vae_path = os.path.join(MODEL_DIR, "vae_model.pt")
-    svdd_path = os.path.join(MODEL_DIR, "svdd_model.pkl")
     scaler_path = os.path.join(MODEL_DIR, "scaler.pkl")
 
     with open(config_path) as f:
@@ -74,15 +73,13 @@ def load_model():
     vae.load_state_dict(checkpoint["model_state_dict"])
     vae.eval()
 
-    svdd = joblib.load(svdd_path)
     scaler = joblib.load(scaler_path)
-    threshold = config.get("best_threshold", config.get("threshold", 0.228))
+    threshold = config.get("f1max_threshold", config.get("global_threshold", 0.032))
 
     log(f"  VAE: {checkpoint['input_dim']} features, latent={checkpoint['latent_dim']}")
-    log(f"  SVDD: {len(svdd.support_)} support vectors")
-    log(f"  Threshold: {threshold:.4f}")
+    log(f"  Threshold F1-max: {threshold:.4f}")
 
-    return vae, svdd, scaler, threshold, config
+    return vae, scaler, threshold, config
 
 
 def fetch_all_data():
@@ -222,7 +219,7 @@ def classify_attack(per_feature_error):
         return "dos_deletion"
 
 
-def process_flights(flights, vae, svdd, scaler, threshold, config):
+def process_flights(flights, vae, scaler, threshold, config):
     log("Processing windows...")
     all_windows = []
     all_flight_ids = []
@@ -253,7 +250,7 @@ def process_flights(flights, vae, svdd, scaler, threshold, config):
     scaled = scaler.transform(flat).reshape(n_windows, WINDOW_SIZE, n_features)
 
     # Infer
-    log("  Running VAE-LSTM inference...")
+    log("  Running VAE-LSTM inference (v3, no SVDD)...")
     all_results = []
     for start in range(0, n_windows, BATCH_INFER):
         end = min(start + BATCH_INFER, n_windows)
@@ -263,13 +260,9 @@ def process_flights(flights, vae, svdd, scaler, threshold, config):
 
         recon_np = recon.numpy()
         batch_np = batch
-        z_np = z.numpy()
 
         for j in range(len(batch)):
             recon_error = float(np.mean((batch_np[j] - recon_np[j]) ** 2))
-            svdd_scores = svdd.decision_function(z_np[j:j+1])
-            svdd_dist = float(-svdd_scores[0])
-            combined = recon_error + svdd_dist
             is_anomaly = recon_error > threshold
 
             attack_type = "normal"
@@ -282,14 +275,13 @@ def process_flights(flights, vae, svdd, scaler, threshold, config):
                 "icao24": all_flight_ids[start + j],
                 "is_anomaly": is_anomaly,
                 "recon_error": recon_error,
-                "svdd_distance": svdd_dist,
-                "combined_score": combined,
+                "weighted_score": recon_error,
                 "attack_type": attack_type,
                 "anomaly_type_detected": attack_type if is_anomaly else None,
                 "dominant_feature": "",
                 "timestamp": datetime.utcfromtimestamp(all_timestamps[start + j]).isoformat() + "Z",
                 "window_size": WINDOW_SIZE,
-                "batch_source": "batch_es.py",
+                "batch_source": "batch_es_v3.py",
             })
 
         if (start // BATCH_INFER + 1) % 10 == 0:
@@ -321,7 +313,7 @@ def main():
     t_start = time.time()
 
     log("=" * 55)
-    log("BATCH-ES: Batch Detection 7,7 Juta Data Teman")
+    log("BATCH-ES v3: Batch Detection 14,2 Juta Data dari Meiva")
     log("=" * 55)
 
     # Connect
@@ -332,8 +324,8 @@ def main():
     log(f"ES teman: {remote_info['name']} ({remote_info['version']['number']})")
     log(f"  Index '{REMOTE_INDEX}': {total_remote:,} docs")
 
-    # Load model
-    vae, svdd, scaler, threshold, config = load_model()
+    # Load model (v3, no SVDD)
+    vae, scaler, threshold, config = load_model()
 
     # Fetch data
     docs = fetch_all_data()
@@ -347,7 +339,7 @@ def main():
     del cleaned
 
     # Process all windows
-    process_flights(flights, vae, svdd, scaler, threshold, config)
+    process_flights(flights, vae, scaler, threshold, config)
 
     # Done
     elapsed = time.time() - t_start

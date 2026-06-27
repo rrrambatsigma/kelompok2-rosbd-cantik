@@ -1,0 +1,60 @@
+{
+  "dataset_note": "Realistic attacks, VAE-only v3",
+  "best_method": "weighted_f1max",
+  "weighted_f1max": {
+    "accuracy": 0.6485295624551696,
+    "precision": 0.5211418104106244,
+    "recall": 0.9209603452926896,
+    "f1": 0.6656268278416845,
+    "auc": 0.7759252281414684,
+    "tp": 6828,
+    "fp": 6274,
+    "fn": 586,
+    "tn": 5830
+  },
+  "weighted_p95": {
+    "accuracy": 0.6949994876524234,
+    "precision": 0.645488946425015,
+    "recall": 0.43714594011329916,
+    "f1": 0.5212706071572175,
+    "auc": 0.7759252281414684,
+    "tp": 3241,
+    "fp": 1780,
+    "fn": 4173,
+    "tn": 10324
+  },
+  "per_attack": {
+    "constant_position": {
+      "total_windows": 1561,
+      "detected": 1342,
+      "recall": 0.8597053171044202
+    },
+    "dos_deletion": {
+      "total_windows": 975,
+      "detected": 975,
+      "recall": 1.0
+    },
+    "flight_merge": {
+      "total_windows": 975,
+      "detected": 975,
+      "recall": 1.0
+    },
+    "heading_manipulation": {
+      "total_windows": 1171,
+      "detected": 1053,
+      "recall": 0.8992314261315115
+    },
+    "random_position": {
+      "total_windows": 1561,
+      "detected": 1327,
+      "recall": 0.8500960922485586
+    },
+    "velocity_drift": {
+      "total_windows": 1171,
+      "detected": 1156,
+      "recall": 0.9871904355251921
+    }
+  },
+  "global_threshold": 0.17208357155323029,
+  "f1max_threshold": 0.03221765160560608
+}

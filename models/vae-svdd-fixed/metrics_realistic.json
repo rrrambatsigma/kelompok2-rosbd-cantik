@@ -1,0 +1,62 @@
+{
+  "accuracy": 0.6492980838200635,
+  "precision": 0.5218426103646833,
+  "recall": 0.9167790666306986,
+  "f1": 0.6651010323401341,
+  "auc": 0.7760375649594531,
+  "best_method": "recon_f1max",
+  "best_threshold": 0.03262054920196533,
+  "f1max_threshold_recon": 0.03262054920196533,
+  "f1max_threshold_combined": 0.011110998713242757,
+  "confusion_matrix": {
+    "tp": 6797,
+    "fp": 6228,
+    "fn": 617,
+    "tn": 5876
+  },
+  "per_attack": {
+    "constant_position": {
+      "total_windows": 1561,
+      "detected_recon": 1329,
+      "detected_combined": 1556,
+      "recall_recon": 0.8513773222293401,
+      "recall_combined": 0.9967969250480462
+    },
+    "dos_deletion": {
+      "total_windows": 975,
+      "detected_recon": 975,
+      "detected_combined": 975,
+      "recall_recon": 1.0,
+      "recall_combined": 1.0
+    },
+    "flight_merge": {
+      "total_windows": 975,
+      "detected_recon": 975,
+      "detected_combined": 975,
+      "recall_recon": 1.0,
+      "recall_combined": 1.0
+    },
+    "heading_manipulation": {
+      "total_windows": 1171,
+      "detected_recon": 1050,
+      "detected_combined": 1168,
+      "recall_recon": 0.89666951323655,
+      "recall_combined": 0.9974380871050385
+    },
+    "random_position": {
+      "total_windows": 1561,
+      "detected_recon": 1313,
+      "detected_combined": 1555,
+      "recall_recon": 0.8411274823830878,
+      "recall_combined": 0.9961563100576554
+    },
+    "velocity_drift": {
+      "total_windows": 1171,
+      "detected_recon": 1155,
+      "detected_combined": 1161,
+      "recall_recon": 0.986336464560205,
+      "recall_combined": 0.9914602903501281
+    }
+  },
+  "dataset_note": "Realistic attacks (subtle magnitude), F1-max threshold"
+}

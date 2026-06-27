@@ -28,8 +28,8 @@ from elasticsearch import Elasticsearch
 from typing import Optional, Dict, Tuple
 
 # ─── KONFIGURASI ────────────────────────────────────────────
-ES_HOST = "localhost:9200"
-ES_INDEX = "flights-remote"      # alias hasil reindex
+ES_HOST = os.getenv("ES_HOST", "http://localhost:9200")
+ES_INDEX = os.getenv("ES_INDEX", "flights-remote")      # alias hasil reindex
 OUTPUT_DIR = os.path.join("data", "checkpoint")
 
 FEATURES = [
@@ -76,7 +76,8 @@ def log(msg: str):
 def fetch_data(es_host: str = ES_HOST, index: str = ES_INDEX,
                days: int = 14, size: int = 10000) -> pd.DataFrame:
     """Query Elasticsearch dengan scroll API — 14 hari terakhir."""
-    es = Elasticsearch(f"http://{es_host}")
+    es_url = es_host if es_host.startswith("http") else f"http://{es_host}"
+    es = Elasticsearch(es_url, request_timeout=120, max_retries=3, retry_on_timeout=True)
 
     log(f"Query {days} hari terakhir dari index '{index}'...")
 
@@ -113,13 +114,41 @@ def fetch_data(es_host: str = ES_HOST, index: str = ES_INDEX,
 
     batch = 2
     while len(hits) > 0:
-        result = es.scroll(scroll_id=scroll_id, scroll="10m")
-        scroll_id = result.get("_scroll_id")
-        hits = result["hits"]["hits"]
-        all_docs.extend([h["_source"] for h in hits])
-        if hits:
-            log(f"  Batch {batch}: {len(hits)} docs (total: {len(all_docs)})")
-            batch += 1
+        try:
+            result = es.scroll(scroll_id=scroll_id, scroll="10m", request_timeout=60)
+            scroll_id = result.get("_scroll_id")
+            hits = result["hits"]["hits"]
+            all_docs.extend([h["_source"] for h in hits])
+            if hits:
+                log(f"  Batch {batch}: {len(hits)} docs (total: {len(all_docs)})")
+                batch += 1
+        except Exception as e:
+            log(f"  Scroll error: {e}, retry dengan scroll baru...")
+            result = es.search(
+                index=index,
+                scroll="10m",
+                size=size,
+                body={
+                    "query": {
+                        "range": {
+                            "timestamp": {
+                                "gte": fourteen_days_ago
+                            }
+                        }
+                    },
+                    "sort": [{"timestamp": {"order": "asc"}}],
+                    "_source": [
+                        "icao24", "callsign", "timestamp",
+                        "latitude", "longitude", "velocity",
+                        "baro_altitude", "true_track",
+                        "region", "on_ground"
+                    ]
+                }
+            )
+            scroll_id = result.get("_scroll_id")
+            hits = result["hits"]["hits"]
+            if hits:
+                log(f"  Restart scroll: {len(hits)} docs (total: {len(all_docs)})")
 
     es.clear_scroll(scroll_id=scroll_id)
 
@@ -316,38 +345,48 @@ def inject_anomalies(df: pd.DataFrame,
             df.loc[idx, "is_anomaly"] = True
             df.loc[idx, "attack_type"] = attack_name
 
-            # Terapkan serangan sesuai jenis
+            # Terapkan serangan sesuai jenis — realistic magnitude
             if attack_name == "constant_position":
-                df.loc[idx, "latitude"] = rng.uniform(-10, 10)
-                df.loc[idx, "longitude"] = rng.uniform(-10, 10)
+                # GPS spoofing: posisi stuck di titik pertama (sensor macet)
+                first_lat = df.loc[idx[0], "latitude"]
+                first_lon = df.loc[idx[0], "longitude"]
+                df.loc[idx, "latitude"] = first_lat + rng.normal(0, 0.005, size=n)
+                df.loc[idx, "longitude"] = first_lon + rng.normal(0, 0.005, size=n)
 
             elif attack_name == "random_position":
+                # GPS jitter: noise posisi kecil ~500m-2km
+                noise_scale = rng.uniform(0.005, 0.02)
                 df.loc[idx, "latitude"] = (df.loc[idx, "latitude"].values +
-                                            rng.normal(0, 2.0, size=n))
+                                            rng.normal(0, noise_scale, size=n))
                 df.loc[idx, "longitude"] = (df.loc[idx, "longitude"].values +
-                                             rng.normal(0, 2.0, size=n))
+                                             rng.normal(0, noise_scale, size=n))
 
             elif attack_name == "velocity_drift":
+                # Sensor drift gradual: 10-40 knots drift
                 base = df.loc[idx, "velocity"].values.astype(float)
                 n_quarter = max(2, n // 4)
                 drift = np.zeros(n)
-                drift[n_quarter:] = np.linspace(100, 300, n - n_quarter) * rng.choice([-1, 1])
+                drift_amount = rng.uniform(10, 40)
+                drift[n_quarter:] = np.linspace(0, drift_amount, n - n_quarter) * rng.choice([-1, 1])
                 df.loc[idx, "velocity"] = np.clip(base + drift, 0, 350)
 
             elif attack_name == "dos_deletion":
-                n_keep = max(1, int(n * 0.3))
+                # Packet loss: hapus 20-30% data
+                drop_ratio = rng.uniform(0.2, 0.3)
+                n_keep = max(1, int(n * (1 - drop_ratio)))
                 keep_idx = rng.choice(idx, size=n_keep, replace=False)
                 drop_idx = idx.difference(keep_idx)
                 df = df.drop(drop_idx)
 
             elif attack_name == "flight_merge":
+                # Trajectory takeover: 30% trajectory diganti
                 donor_pool = [f for f in available_flights
                               if f not in used_flights and f != fid]
                 if donor_pool:
                     donor_fid = rng.choice(donor_pool)
                     donor_data = df[df["flight_id"] == donor_fid]
                     if len(donor_data) > 0:
-                        n_replace = min(len(donor_data), n // 2)
+                        n_replace = min(len(donor_data), max(3, int(n * 0.3)))
                         replace_idx = idx[-n_replace:]
                         donor_vals = donor_data.iloc[-n_replace:]
                         for col in ["latitude", "longitude",
@@ -355,15 +394,16 @@ def inject_anomalies(df: pd.DataFrame,
                             vals = donor_vals[col].values
                             if len(vals) > 0:
                                 df.loc[replace_idx[:len(vals)], col] = vals
-                    # Tambah noise signifikan di titik transisi
-                    transition = idx[max(0, len(idx)//2 - 2):min(len(idx), len(idx)//2 + 2)]
+                    # Noise kecil di titik transisi
+                    transition = idx[max(0, len(idx)//2 - 1):min(len(idx), len(idx)//2 + 2)]
                     if len(transition) > 0:
-                        noise = rng.normal(0, 1.0, size=(len(transition),))
-                        df.loc[transition, "latitude"] = df.loc[transition, "latitude"].values + noise * 2
-                        df.loc[transition, "longitude"] = df.loc[transition, "longitude"].values + noise * 2
+                        noise = rng.normal(0, 0.1, size=(len(transition),))
+                        df.loc[transition, "latitude"] = df.loc[transition, "latitude"].values + noise
+                        df.loc[transition, "longitude"] = df.loc[transition, "longitude"].values + noise
 
             elif attack_name == "heading_manipulation":
-                offset = rng.choice([-90, 90, 180], size=n)
+                # Heading error: shift ±5°/±10°/±20° (error sensor)
+                offset = rng.choice([-20, -10, -5, 5, 10, 20], size=n)
                 df.loc[idx, "true_track"] = (
                     df.loc[idx, "true_track"].values + offset
                 ) % 360

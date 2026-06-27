@@ -1,0 +1,26 @@
+{
+  "feature_names": [
+    "latitude",
+    "longitude",
+    "velocity",
+    "baro_altitude",
+    "true_track",
+    "dlat",
+    "dlon",
+    "dvel",
+    "dalt",
+    "dtrack"
+  ],
+  "n_features": 10,
+  "latent_dim": 4,
+  "window_size": 10,
+  "hidden_dim": 64,
+  "vae_epochs": 200,
+  "vae_lr": 0.001,
+  "vae_beta": 0.001,
+  "global_threshold": 0.5048878788948059,
+  "f1max_threshold": 0.03182750940322876,
+  "best_method": "weighted_f1max",
+  "training_date": "2026-06-27T09:43:26.934090",
+  "model_version": "v3-vae-only"
+}
