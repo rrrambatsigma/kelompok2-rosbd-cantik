@@ -4,6 +4,7 @@ import math
 import joblib
 import os
 import sys
+from datetime import datetime
 
 from elasticsearch import Elasticsearch
 
@@ -397,6 +398,36 @@ def predict(icao24, track=None):
 
     eta_result = predict_eta(lat, lon, destination, speed, alt, hdg, elapsed)
     result.update(eta_result)
+
+    # Simpan history ke ES untuk dashboard riwayat
+    try:
+        pos = result.get("current_position", {})
+        history_doc = {
+            "icao24": icao24,
+            "callsign": result.get("callsign"),
+            "destination": result.get("destination"),
+            "prediction_method": result.get("prediction_method"),
+            "confidence": result.get("confidence"),
+            "eta_seconds": result.get("eta_seconds"),
+            "eta_minutes": result.get("eta_minutes"),
+            "eta_method": result.get("eta_method"),
+            "distance_km_to_dest": result.get("distance_km_to_dest"),
+            "track_points": result.get("track_points"),
+            "current_position": {
+                "lat": pos.get("lat"),
+                "lon": pos.get("lon"),
+                "altitude": pos.get("altitude"),
+                "heading": pos.get("heading"),
+                "speed_kmh": pos.get("speed_kmh"),
+            },
+            "status": result.get("status"),
+            "route": result.get("route"),
+            "recorded_at": datetime.utcnow().timestamp(),
+        }
+        if es is not None:
+            es.index(index="flight_predictions_history", body=history_doc)
+    except Exception:
+        pass
 
     if "heading_top5" not in result:
         heading_results = predict_by_heading(lat, lon, hdg, alt)

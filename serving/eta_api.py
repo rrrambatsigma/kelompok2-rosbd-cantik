@@ -52,6 +52,7 @@ class PredictionResult(BaseModel):
     predicted_at: Optional[str] = None
     last_contact: Optional[int] = None
     on_ground: Optional[bool] = None
+    route: Optional[str] = None
 
 
 class PredictRequest(BaseModel):
@@ -219,6 +220,8 @@ def list_predictions_geojson(
                     "track_points": src.get("track_points"),
                     "status": src.get("status"),
                     "predicted_at": src.get("predicted_at"),
+                    "last_contact": src.get("last_contact"),
+                    "route": src.get("route"),
                 },
             }
             features.append(feature)
@@ -239,6 +242,53 @@ def get_prediction(icao24: str):
         raise HTTPException(status_code=500, detail=str(e))
 
     return format_hit(res)
+
+
+@app.get("/eta/history/{icao24}")
+def get_history(icao24: str, hours: int = Query(3, ge=1, le=72, description="Lookback hours"),
+                limit: int = Query(500, ge=1, le=5000, description="Max results")):
+    if es is None:
+        raise HTTPException(status_code=503, detail="Elasticsearch not connected")
+
+    cutoff = datetime.utcnow().timestamp() - hours * 3600
+    body = {
+        "query": {
+            "bool": {
+                "must": [
+                    {"term": {"icao24": icao24}},
+                    {"range": {"recorded_at": {"gte": cutoff}}}
+                ]
+            }
+        },
+        "sort": [{"recorded_at": {"order": "asc"}}],
+        "size": limit,
+    }
+
+    try:
+        total = es.count(index="flight_predictions_history", body={"query": body["query"]})["count"]
+        res = es.search(index="flight_predictions_history", body=body)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    history = []
+    for hit in res["hits"]["hits"]:
+        src = hit["_source"]
+        history.append({
+            "recorded_at": src.get("recorded_at"),
+            "predicted_at": src.get("predicted_at"),
+            "destination": src.get("destination"),
+            "eta_minutes": src.get("eta_minutes"),
+            "eta_seconds": src.get("eta_seconds"),
+            "confidence": src.get("confidence"),
+            "prediction_method": src.get("prediction_method"),
+            "eta_method": src.get("eta_method"),
+            "distance_km_to_dest": src.get("distance_km_to_dest"),
+            "track_points": src.get("track_points"),
+            "status": src.get("status"),
+            "current_position": src.get("current_position"),
+        })
+
+    return {"icao24": icao24, "total": total, "hours": hours, "history": history}
 
 
 @app.post("/eta/predict", response_model=PredictResponse)
@@ -277,7 +327,7 @@ def stats():
             "size": 0,
             "aggs": {
                 "top_dest": {
-                    "terms": {"field": "destination", "size": 10, "order": {"_count": "desc"}}
+                    "terms": {"field": "destination.keyword", "size": 10, "order": {"_count": "desc"}}
                 }
             }
         })
@@ -290,7 +340,7 @@ def stats():
             "size": 0,
             "aggs": {
                 "top_method": {
-                    "terms": {"field": "prediction_method", "size": 10, "order": {"_count": "desc"}}
+                    "terms": {"field": "prediction_method.keyword", "size": 10, "order": {"_count": "desc"}}
                 }
             }
         })
@@ -359,4 +409,5 @@ def format_raw(src: dict) -> PredictionResult:
         predicted_at=src.get("predicted_at"),
         last_contact=src.get("last_contact"),
         on_ground=src.get("on_ground"),
+        route=src.get("route"),
     )
