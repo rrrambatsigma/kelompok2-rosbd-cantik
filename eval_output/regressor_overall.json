@@ -1,0 +1,13 @@
+{
+  "mae_seconds": 219.49,
+  "mae_minutes": 3.66,
+  "rmse_seconds": 828.1,
+  "rmse_minutes": 13.8,
+  "r2_score": 0.9905,
+  "error_lt_1min_pct": 41.9,
+  "error_lt_5min_pct": 86.1,
+  "error_lt_10min_pct": 93.9,
+  "error_lt_15min_pct": 96.2,
+  "error_lt_30min_pct": 98.3,
+  "test_samples": 10000
+}

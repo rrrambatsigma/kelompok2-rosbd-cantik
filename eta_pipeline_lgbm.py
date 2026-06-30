@@ -7,27 +7,20 @@ import sys
 
 from elasticsearch import Elasticsearch
 
-# =========================
-# CONFIG
-# =========================
-# ES_HOST = os.getenv("ES_HOST", "http://100.99.130.69:9200")
 ES_HOST = os.getenv("ES_HOST", "http://127.0.0.1:9200")
 INDEX_NAME = "flights"
 
 AIRPORT_FILE = "data/final/airport_lookup.csv"
 CALLSIGN_CONFIDENCE_FILE = "data/final/callsign_route_confidence.csv"
 ROUTE_AVG_DURATION_FILE = "data/final/route_avg_duration_clean.csv"
-CLASSIFIER_MODEL_FILE = "models/destination_classifier.pkl"
-DEST_ENCODER_FILE = "models/destination_encoder.pkl"
-ETA_MODEL_FILE = "models/eta_xgboost_balanced.pkl"
-ROUTE_ENCODER_FILE = "models/route_encoder.pkl"
+CLASSIFIER_MODEL_FILE = "models/destination_lgbm.pkl"
+DEST_ENCODER_FILE = "models/destination_encoder_lgbm.pkl"
+ETA_MODEL_FILE = "models/eta_lgbm.pkl"
+ROUTE_ENCODER_FILE = "models/route_encoder_lgbm.pkl"
 
 R = 6371.0
 
-# =========================
-# LOAD DATA
-# =========================
-print("Loading pipeline resources...")
+print("Loading pipeline resources (LightGBM)...")
 
 airports = pd.read_csv(AIRPORT_FILE)
 airport_dict = dict(zip(airports["icao"], list(zip(airports["lat"], airports["lon"]))))
@@ -57,11 +50,8 @@ except Exception:
     es = None
     es_available = False
 
-print("Pipeline ready.")
+print("Pipeline ready (LightGBM).")
 
-# =========================
-# HELPERS
-# =========================
 
 def haversine(lat1, lon1, lat2, lon2):
     dlat = math.radians(lat2 - lat1)
@@ -69,6 +59,7 @@ def haversine(lat1, lon1, lat2, lon2):
     a = (math.sin(dlat/2)**2 + math.cos(math.radians(lat1))
          * math.cos(math.radians(lat2)) * math.sin(dlon/2)**2)
     return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+
 
 def bearing(lat1, lon1, lat2, lon2):
     lat1_r, lat2_r = math.radians(lat1), math.radians(lat2)
@@ -79,9 +70,11 @@ def bearing(lat1, lon1, lat2, lon2):
     b = math.degrees(math.atan2(x, y))
     return (b + 360) % 360
 
+
 def heading_diff(h1, h2):
     d = abs(h1 - h2)
     return min(d, 360 - d)
+
 
 def haversine_vec(lat1, lon1, lat2, lon2):
     lat1_r = np.radians(lat1)
@@ -93,14 +86,10 @@ def haversine_vec(lat1, lon1, lat2, lon2):
     a = np.sin(dlat/2)**2 + np.cos(lat1_r) * np.cos(lat2_r) * np.sin(dlon/2)**2
     return R * 2 * np.arctan2(np.sqrt(a), np.sqrt(1-a))
 
-# =========================
-# 1. GET TRAJECTORY FROM ES
-# =========================
 
 def get_trajectory(icao24, size=100):
     if not es_available or es is None:
         return pd.DataFrame()
-
     query = {
         "query": {"term": {"icao24.keyword": icao24}},
         "sort": [{"timestamp": {"order": "desc"}}],
@@ -110,7 +99,6 @@ def get_trajectory(icao24, size=100):
         result = es.search(index=INDEX_NAME, body=query)
     except Exception:
         return pd.DataFrame()
-
     rows = []
     for hit in result["hits"]["hits"]:
         src = hit["_source"]
@@ -129,10 +117,6 @@ def get_trajectory(icao24, size=100):
         return df
     return df.sort_values("timestamp").reset_index(drop=True)
 
-
-# =========================
-# 2. CALLSIGN LOOKUP
-# =========================
 
 def predict_by_callsign(callsign, min_confidence=0.95):
     if not callsign:
@@ -153,11 +137,7 @@ def predict_by_callsign(callsign, min_confidence=0.95):
     }
 
 
-# =========================
-# 3. ML CLASSIFIER
-# =========================
-
-def predict_by_ml(lat, lon, alt, hdg):
+def predict_by_lgbm(lat, lon, alt, hdg):
     dists = [haversine(lat, lon, airport_lats[i], airport_lons[i])
              for i in range(len(airport_lats))]
     nearest_5_idx = np.argsort(dists)[:5]
@@ -187,13 +167,9 @@ def predict_by_ml(lat, lon, alt, hdg):
     return {
         "destination": destination,
         "confidence": max_prob,
-        "method": "ml_classifier"
+        "method": "lgbm_classifier"
     }
 
-
-# =========================
-# 4. HEADING-BASED SCORING
-# =========================
 
 def predict_by_heading(lat, lon, hdg, alt=None):
     results = []
@@ -220,18 +196,12 @@ def predict_by_heading(lat, lon, hdg, alt=None):
     return results[:10]
 
 
-# =========================
-# 5. ETA CALCULATION
-# =========================
-
 def predict_eta(lat, lon, destination, speed_kmh, alt, hdg, elapsed_seconds=None):
     ap_lat, ap_lon = airport_dict[destination]
     dist_km = haversine(lat, lon, ap_lat, ap_lon)
 
-    # Method A: distance / speed (primary for real-time)
     eta_simple = (dist_km / speed_kmh) * 3600 if speed_kmh and speed_kmh > 0 else None
 
-    # Method B: route avg duration (for long-range flights)
     eta_route = None
     route_found = None
     for route, avg_dur in route_dur_dict.items():
@@ -243,8 +213,7 @@ def predict_eta(lat, lon, destination, speed_kmh, alt, hdg, elapsed_seconds=None
                     eta_route = remaining
             break
 
-    # Method C: XGBoost (only when we can estimate progress)
-    eta_xgb = None
+    eta_lgbm = None
     if route_found and route_found in known_routes and speed_kmh > 100:
         total_dur = route_dur_dict.get(route_found, 3600)
         if elapsed_seconds and elapsed_seconds > 120:
@@ -258,17 +227,16 @@ def predict_eta(lat, lon, destination, speed_kmh, alt, hdg, elapsed_seconds=None
         try:
             pred = eta_model.predict(feat)[0]
             if 120 < pred < total_dur:
-                eta_xgb = pred
+                eta_lgbm = pred
         except Exception:
             pass
 
-    # Pick best method (prefer simpler when close)
     if dist_km < 200 and eta_simple:
         best_eta = eta_simple
         method = "distance_speed"
-    elif eta_xgb:
-        best_eta = eta_xgb
-        method = "xgboost"
+    elif eta_lgbm:
+        best_eta = eta_lgbm
+        method = "lgbm"
     elif eta_route:
         best_eta = eta_route
         method = "route_avg"
@@ -287,10 +255,6 @@ def predict_eta(lat, lon, destination, speed_kmh, alt, hdg, elapsed_seconds=None
     }
 
 
-# =========================
-# MAIN PREDICT
-# =========================
-
 def to_native(obj):
     if obj is None:
         return None
@@ -306,6 +270,7 @@ def to_native(obj):
         return obj.tolist()
     return obj
 
+
 def deep_convert(d):
     if isinstance(d, dict):
         return {k: deep_convert(v) for k, v in d.items()}
@@ -313,10 +278,10 @@ def deep_convert(d):
         return [deep_convert(v) for v in d]
     return to_native(d)
 
+
 def predict(icao24, track=None):
     result = {"icao24": icao24, "status": "ok"}
 
-    # Step 1: Get trajectory
     if track is not None:
         traj = track
     else:
@@ -349,7 +314,6 @@ def predict(icao24, track=None):
     method = None
     confidence = 0
 
-    # Step 2: Callsign lookup
     callsign = result.get("callsign")
     if callsign:
         cs_result = predict_by_callsign(callsign)
@@ -359,15 +323,13 @@ def predict(icao24, track=None):
             confidence = cs_result["confidence"]
             result["route"] = cs_result["route"]
 
-    # Step 3: ML classifier
     if not destination and alt > 100:
-        ml_result = predict_by_ml(lat, lon, alt, hdg)
-        if ml_result:
-            destination = ml_result["destination"]
-            method = ml_result["method"]
-            confidence = ml_result["confidence"]
+        lgbm_result = predict_by_lgbm(lat, lon, alt, hdg)
+        if lgbm_result:
+            destination = lgbm_result["destination"]
+            method = lgbm_result["method"]
+            confidence = lgbm_result["confidence"]
 
-    # Step 4: Heading scoring fallback
     if not destination:
         heading_results = predict_by_heading(lat, lon, hdg, alt)
         if heading_results:
@@ -384,13 +346,11 @@ def predict(icao24, track=None):
         result["error"] = "Could not predict destination"
         return result
 
-    # Step 5: ETA
     elapsed = None
     if len(traj) >= 2:
         t0 = traj["timestamp"].iloc[0]
         t1 = traj["timestamp"].iloc[-1]
         elapsed = t1 - t0
-    # if we have a long track history, use it as elapsed estimate
     if elapsed is None or elapsed < 60:
         if len(traj) >= 5:
             elapsed = max(elapsed or 0, 300)
@@ -408,10 +368,6 @@ def predict(icao24, track=None):
     return deep_convert(result)
 
 
-# =========================
-# SYNTHETIC TEST (no ES needed)
-# =========================
-
 def make_track(lat, lon, alt, hdg, speed, callsign=None, n=10):
     rows = []
     for i in range(n):
@@ -427,10 +383,6 @@ def make_track(lat, lon, alt, hdg, speed, callsign=None, n=10):
         })
     return pd.DataFrame(rows)
 
-
-# =========================
-# CLI / DEMO
-# =========================
 
 def demo():
     test_cases = [
@@ -455,6 +407,7 @@ def demo():
             print("  heading_top5:")
             for r in result["heading_top5"][:3]:
                 print(f"    {r['airport']}: {r['score']:.4f}")
+
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:

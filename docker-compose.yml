@@ -228,9 +228,12 @@ services:
       - elasticsearch
     environment:
       - ES_HOST=http://elasticsearch:9200
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
     volumes:
       - ./data:/app/data
       - ./models:/app/models
+      - .:/app
     command: ["python", "-u", "eta_scheduler.py"]
     networks:
       - flight-net
