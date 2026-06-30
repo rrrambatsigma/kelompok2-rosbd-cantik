@@ -221,3 +221,32 @@ services:
     command: ["python", "-u", "eta_scheduler.py"]
     networks:
       - flight-net
+
+  eta-api:
+    build: .
+    container_name: eta-api
+    ports:
+      - "8002:8002"
+    depends_on:
+      - elasticsearch
+    environment:
+      - ES_HOST=http://elasticsearch:9200
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models
+    command: ["uvicorn", "serving.eta_api:app", "--host", "0.0.0.0", "--port", "8002"]
+    networks:
+      - flight-net
+
+  eta-dashboard:
+    build: .
+    container_name: eta-dashboard
+    ports:
+      - "8501:8501"
+    depends_on:
+      - eta-api
+    environment:
+      - ETA_API_HOST=http://eta-api:8002
+    command: ["streamlit", "run", "dashboard_eta.py", "--server.port=8501", "--server.address=0.0.0.0"]
+    networks:
+      - flight-net
