@@ -209,7 +209,9 @@ services:
       - flight-net
 
   eta-consumer:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.eta
     container_name: eta-consumer
     depends_on:
       - kafka
@@ -222,18 +224,17 @@ services:
       - flight-net
 
   eta-scheduler:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.eta
     container_name: eta-scheduler
     depends_on:
       - elasticsearch
     environment:
       - ES_HOST=http://elasticsearch:9200
-      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
-      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
     volumes:
       - ./data:/app/data
       - ./models:/app/models
-      - .:/app
     command: ["python", "-u", "eta_scheduler.py"]
     networks:
       - flight-net
@@ -264,5 +265,18 @@ services:
     environment:
       - ETA_API_HOST=http://eta-api:8002
     command: ["streamlit", "run", "dashboard_eta.py", "--server.port=8501", "--server.address=0.0.0.0"]
+    networks:
+      - flight-net
+
+  eta-performance-tracker:
+    build:
+      context: .
+      dockerfile: Dockerfile.eta
+    container_name: eta-performance-tracker
+    depends_on:
+      - elasticsearch
+    environment:
+      - ES_HOST=http://elasticsearch:9200
+    command: ["python", "-u", "eta_performance_tracker.py"]
     networks:
       - flight-net

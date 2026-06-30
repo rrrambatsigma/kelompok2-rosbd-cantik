@@ -120,6 +120,15 @@ def run_once(last_check):
             result["on_ground"] = False
             if result.get("status") == "no_data":
                 return ("no_data", icao24, None)
+
+            cp = result.get("current_position", {})
+            dist = result.get("distance_km_to_dest", 999)
+            alt = cp.get("altitude", 9999) if isinstance(cp, dict) else 9999
+            spd = cp.get("speed_kmh", 999) if isinstance(cp, dict) else 999
+            if dist < 10 and spd < 100 and alt < 500:
+                result["status"] = "landed"
+                result["on_ground"] = True
+
             save_prediction(result)
             return ("saved", icao24, result)
         except Exception:

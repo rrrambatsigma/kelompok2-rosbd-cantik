@@ -1,0 +1,233 @@
+{
+  "__inputs": [],
+  "__requires": [],
+  "title": "ETA - Model Performance",
+  "uid": "eta-model",
+  "version": 1,
+  "schemaVersion": 36,
+  "tags": ["ads-b", "eta", "model"],
+  "timezone": "browser",
+  "editable": true,
+  "panels": [
+    {
+      "title": "Prediction Method",
+      "type": "piechart",
+      "gridPos": {"h": 5, "w": 4, "x": 0, "y": 0},
+      "targets": [{
+        "expr": "",
+        "format": "table",
+        "intervalFactor": 1,
+        "refId": "A",
+        "dataSource": "Elasticsearch",
+        "query": {
+          "index": "flight_predictions",
+          "query": "status: ok",
+          "timeField": "predicted_at"
+        },
+        "metrics": [{
+          "type": "terms",
+          "field": "prediction_method.keyword",
+          "settings": {"size": 5}
+        }]
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "displayMode": "piechart",
+            "pieType": "pie"
+          }
+        }
+      },
+      "description": "Distribusi metode prediksi destinasi"
+    },
+    {
+      "title": "ETA Method",
+      "type": "piechart",
+      "gridPos": {"h": 5, "w": 4, "x": 4, "y": 0},
+      "targets": [{
+        "expr": "",
+        "format": "table",
+        "intervalFactor": 1,
+        "refId": "A",
+        "dataSource": "Elasticsearch",
+        "query": {
+          "index": "flight_predictions",
+          "query": "status: ok",
+          "timeField": "predicted_at"
+        },
+        "metrics": [{
+          "type": "terms",
+          "field": "eta_method.keyword",
+          "settings": {"size": 5}
+        }]
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "displayMode": "piechart",
+            "pieType": "pie"
+          }
+        }
+      },
+      "description": "Distribusi metode kalkulasi ETA"
+    },
+    {
+      "title": "Origin Method",
+      "type": "piechart",
+      "gridPos": {"h": 5, "w": 4, "x": 8, "y": 0},
+      "targets": [{
+        "expr": "",
+        "format": "table",
+        "intervalFactor": 1,
+        "refId": "A",
+        "dataSource": "Elasticsearch",
+        "query": {
+          "index": "flight_predictions",
+          "query": "_exists_:origin_method",
+          "timeField": "predicted_at"
+        },
+        "metrics": [{
+          "type": "terms",
+          "field": "origin_method.keyword",
+          "settings": {"size": 5}
+        }]
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "displayMode": "piechart",
+            "pieType": "pie"
+          }
+        }
+      },
+      "description": "Distribusi metode prediksi asal"
+    },
+    {
+      "title": "Confidence Rata-rata",
+      "type": "timeseries",
+      "gridPos": {"h": 5, "w": 6, "x": 0, "y": 5},
+      "targets": [{
+        "expr": "",
+        "format": "table",
+        "intervalFactor": 1,
+        "refId": "A",
+        "dataSource": "Elasticsearch",
+        "query": {
+          "index": "flight_predictions",
+          "query": "status: ok",
+          "timeField": "predicted_at"
+        },
+        "metrics": [{"type": "avg", "field": "confidence"}],
+        "bucketAggs": [{"type": "date_histogram", "field": "predicted_at", "settings": {"interval": "1h"}}]
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "custom": {"displayMode": "lines"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "red", "value": null},
+              {"color": "orange", "value": 0.5},
+              {"color": "green", "value": 0.8}
+            ]
+          }
+        }
+      },
+      "description": "Rata-rata confidence prediksi per jam"
+    },
+    {
+      "title": "Prediksi per Jam",
+      "type": "barchart",
+      "gridPos": {"h": 5, "w": 6, "x": 6, "y": 5},
+      "targets": [{
+        "expr": "",
+        "format": "table",
+        "intervalFactor": 1,
+        "refId": "A",
+        "dataSource": "Elasticsearch",
+        "query": {
+          "index": "flight_predictions",
+          "query": "*",
+          "timeField": "predicted_at"
+        },
+        "metrics": [{"type": "count", "field": "icao24"}],
+        "bucketAggs": [{"type": "date_histogram", "field": "predicted_at", "settings": {"interval": "1h"}}]
+      }],
+      "description": "Jumlah prediksi yang dibuat per jam"
+    },
+    {
+      "title": "Status Prediksi",
+      "type": "row",
+      "gridPos": {"h": 2, "w": 12, "x": 0, "y": 10},
+      "collapsed": true,
+      "panels": [
+        {
+          "title": "Status OK",
+          "type": "stat",
+          "gridPos": {"h": 3, "w": 4, "x": 0, "y": 12},
+          "targets": [{
+            "expr": "",
+            "format": "table",
+            "intervalFactor": 1,
+            "refId": "A",
+            "dataSource": "Elasticsearch",
+            "query": {
+              "index": "flight_predictions",
+              "query": "status: ok",
+              "timeField": "predicted_at"
+            },
+            "metrics": [{"type": "count", "field": "icao24"}]
+          }],
+          "fieldConfig": {"defaults": {"color": {"mode": "background", "fixedColor": "green"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}}}
+        },
+        {
+          "title": "Status Failed",
+          "type": "stat",
+          "gridPos": {"h": 3, "w": 4, "x": 4, "y": 12},
+          "targets": [{
+            "expr": "",
+            "format": "table",
+            "intervalFactor": 1,
+            "refId": "A",
+            "dataSource": "Elasticsearch",
+            "query": {
+              "index": "flight_predictions",
+              "query": "status: failed",
+              "timeField": "predicted_at"
+            },
+            "metrics": [{"type": "count", "field": "icao24"}]
+          }],
+          "fieldConfig": {"defaults": {"color": {"mode": "background", "fixedColor": "red"}, "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}]}}}
+        },
+        {
+          "title": "Status No Data",
+          "type": "stat",
+          "gridPos": {"h": 3, "w": 4, "x": 8, "y": 12},
+          "targets": [{
+            "expr": "",
+            "format": "table",
+            "intervalFactor": 1,
+            "refId": "A",
+            "dataSource": "Elasticsearch",
+            "query": {
+              "index": "flight_predictions",
+              "query": "status: no_data",
+              "timeField": "predicted_at"
+            },
+            "metrics": [{"type": "count", "field": "icao24"}]
+          }],
+          "fieldConfig": {"defaults": {"color": {"mode": "background", "fixedColor": "orange"}, "thresholds": {"mode": "absolute", "steps": [{"color": "orange", "value": null}]}}}
+        }
+      ]
+    }
+  ],
+  "templating": {"list": []},
+  "refresh": "30s",
+  "time": {"from": "now-24h", "to": "now"}
+}

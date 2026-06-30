@@ -222,7 +222,55 @@ def predict_by_heading(lat, lon, hdg, alt=None):
 
 
 # =========================
-# 5. ETA CALCULATION
+# 5. ORIGIN PREDICTION
+# =========================
+
+def predict_origin_by_callsign(callsign, destination):
+    if not callsign or not destination:
+        return None
+    match = callsign_lookup[callsign_lookup["callsign"] == callsign.strip()]
+    if len(match) == 0:
+        return None
+    best = match.iloc[0]
+    route = best["route"]
+    parts = route.split("_")
+    if len(parts) == 2 and parts[-1] == destination:
+        return {"origin": parts[0], "method": "callsign", "confidence": best["confidence"]}
+    return None
+
+
+def predict_origin_by_heading(lat, lon, heading, destination):
+    dest_coords = airport_dict.get(destination)
+    if not dest_coords:
+        return None
+    dest_lat, dest_lon = dest_coords
+    candidates = []
+    for ap_icao, (ap_lat, ap_lon) in airport_dict.items():
+        if ap_icao == destination:
+            continue
+        d = haversine(lat, lon, ap_lat, ap_lon)
+        if d > 800:
+            continue
+        bearing_ap_to_plane = bearing(ap_lat, ap_lon, lat, lon)
+        hd = heading_diff(heading, bearing_ap_to_plane)
+        if hd <= 135:
+            continue
+        bearing_ap_to_dest = bearing(ap_lat, ap_lon, dest_lat, dest_lon)
+        angle_diff = heading_diff(bearing_ap_to_plane, bearing_ap_to_dest)
+        score = d * (1 + angle_diff / 90)
+        candidates.append({"origin": ap_icao, "score": score, "distance": d, "angle_diff": angle_diff})
+    if not candidates:
+        return None
+    best = min(candidates, key=lambda x: x["score"])
+    return {
+        "origin": best["origin"],
+        "method": "heading_scoring",
+        "confidence": round(1 / (1 + best["score"] / 500), 4)
+    }
+
+
+# =========================
+# 6. ETA CALCULATION
 # =========================
 
 def predict_eta(lat, lon, destination, speed_kmh, alt, hdg, elapsed_seconds=None):
@@ -385,7 +433,24 @@ def predict(icao24, track=None):
         result["error"] = "Could not predict destination"
         return result
 
-    # Step 5: ETA
+    # Step 6: Origin prediction
+    origin_result = None
+    if result.get("route"):
+        parts = result["route"].split("_")
+        if len(parts) == 2:
+            origin_result = {"origin": parts[0], "method": "route_lookup", "confidence": 1.0}
+    if not origin_result:
+        callsign = result.get("callsign")
+        if callsign and destination:
+            origin_result = predict_origin_by_callsign(callsign, destination)
+    if not origin_result:
+        origin_result = predict_origin_by_heading(lat, lon, hdg, destination)
+    if origin_result:
+        result["origin"] = origin_result["origin"]
+        result["origin_method"] = origin_result["method"]
+        result["origin_confidence"] = origin_result["confidence"]
+
+    # Step 7: ETA
     elapsed = None
     if len(traj) >= 2:
         t0 = traj["timestamp"].iloc[0]
@@ -422,6 +487,9 @@ def predict(icao24, track=None):
             },
             "status": result.get("status"),
             "route": result.get("route"),
+            "origin": result.get("origin"),
+            "origin_method": result.get("origin_method"),
+            "origin_confidence": result.get("origin_confidence"),
             "recorded_at": datetime.utcnow().timestamp(),
         }
         if es is not None:

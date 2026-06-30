@@ -1,0 +1,203 @@
+{
+  "__inputs": [],
+  "__requires": [],
+  "title": "ETA - Informasi Kedatangan",
+  "uid": "eta-arrival",
+  "version": 1,
+  "schemaVersion": 36,
+  "tags": ["ads-b", "eta", "arrival"],
+  "timezone": "browser",
+  "editable": true,
+  "panels": [
+    {
+      "title": "Tiba < 30 Menit",
+      "type": "stat",
+      "gridPos": {"h": 3, "w": 3, "x": 0, "y": 0},
+      "targets": [{
+        "expr": "",
+        "format": "table",
+        "intervalFactor": 1,
+        "refId": "A",
+        "dataSource": "Elasticsearch",
+        "query": {
+          "index": "flight_predictions",
+          "query": "status: ok AND eta_minutes: [0 TO 30]",
+          "timeField": "predicted_at"
+        },
+        "metrics": [{"type": "count", "field": "icao24"}]
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "color": {"mode": "background"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "orange", "value": 5},
+              {"color": "red", "value": 15}
+            ]
+          }
+        }
+      },
+      "description": "Jumlah pesawat dengan estimasi tiba kurang dari 30 menit"
+    },
+    {
+      "title": "Prediksi Aktif",
+      "type": "stat",
+      "gridPos": {"h": 3, "w": 3, "x": 3, "y": 0},
+      "targets": [{
+        "expr": "",
+        "format": "table",
+        "intervalFactor": 1,
+        "refId": "A",
+        "dataSource": "Elasticsearch",
+        "query": {
+          "index": "flight_predictions",
+          "query": "status: ok",
+          "timeField": "predicted_at"
+        },
+        "metrics": [{"type": "count", "field": "icao24"}]
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "color": {"mode": "background"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "blue", "value": null},
+              {"color": "purple", "value": 100}
+            ]
+          }
+        }
+      },
+      "description": "Total prediksi aktif (status ok)"
+    },
+    {
+      "title": "Origin Terisi",
+      "type": "stat",
+      "gridPos": {"h": 3, "w": 3, "x": 6, "y": 0},
+      "targets": [{
+        "expr": "",
+        "format": "table",
+        "intervalFactor": 1,
+        "refId": "A",
+        "dataSource": "Elasticsearch",
+        "query": {
+          "index": "flight_predictions",
+          "query": "_exists_:origin AND status: ok",
+          "timeField": "predicted_at"
+        },
+        "metrics": [{"type": "count", "field": "icao24"}]
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "color": {"mode": "background"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null}
+            ]
+          }
+        }
+      },
+      "description": "Jumlah prediksi dengan asal (origin) terdeteksi"
+    },
+    {
+      "title": "Total Prediksi",
+      "type": "stat",
+      "gridPos": {"h": 3, "w": 3, "x": 9, "y": 0},
+      "targets": [{
+        "expr": "",
+        "format": "table",
+        "intervalFactor": 1,
+        "refId": "A",
+        "dataSource": "Elasticsearch",
+        "query": {
+          "index": "flight_predictions",
+          "query": "*",
+          "timeField": "predicted_at"
+        },
+        "metrics": [{"type": "count", "field": "icao24"}]
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "color": {"mode": "background"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "purple", "value": null}
+            ]
+          }
+        }
+      },
+      "description": "Total seluruh prediksi di database"
+    },
+    {
+      "title": "Top Destinasi",
+      "type": "barchart",
+      "gridPos": {"h": 7, "w": 6, "x": 0, "y": 3},
+      "targets": [{
+        "expr": "",
+        "format": "table",
+        "intervalFactor": 1,
+        "refId": "A",
+        "dataSource": "Elasticsearch",
+        "query": {
+          "index": "flight_predictions",
+          "query": "status: ok",
+          "timeField": "predicted_at"
+        },
+        "metrics": [{
+          "type": "terms",
+          "field": "destination.keyword",
+          "settings": {"size": 15}
+        }]
+      }],
+      "description": "Bandara tujuan paling banyak diprediksi"
+    },
+    {
+      "title": "Prediksi Aktif (Detail)",
+      "type": "table",
+      "gridPos": {"h": 7, "w": 6, "x": 6, "y": 3},
+      "targets": [{
+        "expr": "",
+        "format": "table",
+        "intervalFactor": 1,
+        "refId": "A",
+        "dataSource": "Elasticsearch",
+        "query": {
+          "index": "flight_predictions",
+          "query": "status: ok",
+          "timeField": "predicted_at"
+        },
+        "metrics": [{"type": "raw_data", "settings": {"size": 20}}]
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "displayMode": "table"
+          }
+        }
+      },
+      "transformations": [
+        {"id": "organize", "options": {"excludeByName": {}, "indexByName": {}, "renameByName": {
+          "callsign": "Callsign",
+          "origin": "Asal",
+          "destination": "Tujuan",
+          "eta_minutes": "ETA (menit)",
+          "confidence": "Confidence",
+          "prediction_method": "Method",
+          "origin_method": "Origin Method"
+        }}}
+      ],
+      "description": "Daftar prediksi aktif lengkap dengan detail"
+    }
+  ],
+  "templating": {"list": []},
+  "refresh": "15s",
+  "time": {"from": "now-1h", "to": "now"}
+}

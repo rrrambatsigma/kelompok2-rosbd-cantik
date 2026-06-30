@@ -1,0 +1,209 @@
+{
+  "__inputs": [],
+  "__requires": [],
+  "title": "ETA - Accuracy Tracking",
+  "uid": "eta-accuracy",
+  "version": 1,
+  "schemaVersion": 36,
+  "tags": ["ads-b", "eta", "accuracy"],
+  "timezone": "browser",
+  "editable": true,
+  "panels": [
+    {
+      "title": "RMSE (detik)",
+      "type": "stat",
+      "gridPos": {"h": 3, "w": 3, "x": 0, "y": 0},
+      "targets": [{
+        "expr": "",
+        "format": "table",
+        "intervalFactor": 1,
+        "refId": "A",
+        "dataSource": "Elasticsearch",
+        "query": {
+          "index": "eta_errors",
+          "query": "*",
+          "timeField": "recorded_at"
+        },
+        "metrics": [{"type": "extended_stats", "field": "error_sec", "meta": {"std_deviation_bounds_lower": true, "std_deviation_bounds_upper": true}, "settings": {}}]
+      }],
+      "transformations": [
+        {"id": "calculateField", "options": {"alias": "RMSE", "expression": "sqrt($RMS)", "variable": "RMS", "reduce": "sum"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "color": {"mode": "background"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "orange", "value": 300},
+              {"color": "red", "value": 600}
+            ]
+          }
+        }
+      },
+      "description": "Root Mean Square Error (semakin kecil semakin baik)"
+    },
+    {
+      "title": "MAE (detik)",
+      "type": "stat",
+      "gridPos": {"h": 3, "w": 3, "x": 3, "y": 0},
+      "targets": [{
+        "expr": "",
+        "format": "table",
+        "intervalFactor": 1,
+        "refId": "A",
+        "dataSource": "Elasticsearch",
+        "query": {
+          "index": "eta_errors",
+          "query": "*",
+          "timeField": "recorded_at"
+        },
+        "metrics": [{"type": "avg", "field": "error_sec"}]
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "color": {"mode": "background"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "orange", "value": 180},
+              {"color": "red", "value": 600}
+            ]
+          }
+        }
+      },
+      "description": "Mean Absolute Error (rata-rata selisih prediksi vs aktual)"
+    },
+    {
+      "title": "MAPE (%)",
+      "type": "stat",
+      "gridPos": {"h": 3, "w": 3, "x": 6, "y": 0},
+      "targets": [{
+        "expr": "",
+        "format": "table",
+        "intervalFactor": 1,
+        "refId": "A",
+        "dataSource": "Elasticsearch",
+        "query": {
+          "index": "eta_errors",
+          "query": "*",
+          "timeField": "recorded_at"
+        },
+        "metrics": [{"type": "avg", "field": "error_pct"}]
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "color": {"mode": "background"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "orange", "value": 15},
+              {"color": "red", "value": 30}
+            ]
+          }
+        }
+      },
+      "description": "Mean Absolute Percentage Error"
+    },
+    {
+      "title": "Total Landing Tracked",
+      "type": "stat",
+      "gridPos": {"h": 3, "w": 3, "x": 9, "y": 0},
+      "targets": [{
+        "expr": "",
+        "format": "table",
+        "intervalFactor": 1,
+        "refId": "A",
+        "dataSource": "Elasticsearch",
+        "query": {
+          "index": "eta_errors",
+          "query": "*",
+          "timeField": "recorded_at"
+        },
+        "metrics": [{"type": "count", "field": "icao24"}]
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "color": {"mode": "background"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "blue", "value": null}
+            ]
+          }
+        }
+      },
+      "description": "Total landing yang sudah diverifikasi"
+    },
+    {
+      "title": "Error Trend (per Jam)",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 6, "x": 0, "y": 3},
+      "targets": [{
+        "expr": "",
+        "format": "table",
+        "intervalFactor": 1,
+        "refId": "A",
+        "dataSource": "Elasticsearch",
+        "query": {
+          "index": "eta_errors",
+          "query": "*",
+          "timeField": "recorded_at"
+        },
+        "metrics": [{"type": "avg", "field": "error_sec"}],
+        "bucketAggs": [{"type": "date_histogram", "field": "recorded_at", "settings": {"interval": "1h"}}]
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {"displayMode": "lines"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "orange", "value": 300},
+              {"color": "red", "value": 600}
+            ]
+          }
+        }
+      },
+      "description": "Rata-rata error per jam — lihat tren performa model"
+    },
+    {
+      "title": "Error by ETA Method",
+      "type": "barchart",
+      "gridPos": {"h": 6, "w": 6, "x": 6, "y": 3},
+      "targets": [{
+        "expr": "",
+        "format": "table",
+        "intervalFactor": 1,
+        "refId": "A",
+        "dataSource": "Elasticsearch",
+        "query": {
+          "index": "eta_errors",
+          "query": "*",
+          "timeField": "recorded_at"
+        },
+        "metrics": [{"type": "avg", "field": "error_sec"}],
+        "bucketAggs": [{"type": "terms", "field": "eta_method.keyword", "settings": {"size": 5}}]
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {"displayMode": "barchart"}
+        }
+      },
+      "description": "Rata-rata error per metode ETA — methoda mana paling akurat?"
+    }
+  ],
+  "templating": {"list": []},
+  "refresh": "30s",
+  "time": {"from": "now-24h", "to": "now"}
+}
