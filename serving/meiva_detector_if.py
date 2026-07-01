@@ -21,6 +21,9 @@ from elasticsearch import Elasticsearch
 warnings.filterwarnings("ignore")
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, BASE_DIR)
+
+from utils.telegram_notifier import notify_startup, notify_performance as tg_notify_performance, notify_anomaly as tg_notify_anomaly
 
 KAFKA_HOST = "100.99.130.69:9093"
 TOPIC = "flights"
@@ -37,7 +40,8 @@ THROTTLE_SECONDS = 3
 
 buffers = defaultdict(lambda: deque(maxlen=WINDOW_SIZE))
 last_infer_time = {}
-stats = {"total": 0, "anomalies": 0, "buffer_ready": 0, "es_errors": 0, "reconnects": 0}
+stats = {"total": 0, "anomalies": 0, "buffer_ready": 0, "es_errors": 0, "reconnects": 0,
+         "attack_counts": defaultdict(int)}
 last_report = time.time()
 errors_history = deque(maxlen=1000)
 
@@ -164,6 +168,17 @@ def predict_and_save(icao24, flight_data, if_model, scaler, threshold, es):
     stats["buffer_ready"] += 1
     if result["is_anomaly"]:
         stats["anomalies"] += 1
+        stats["attack_counts"][result["attack_type"]] += 1
+        tg_notify_anomaly({
+            "icao24": icao24,
+            "callsign": flight_data.get("callsign", "?"),
+            "attack_type": result["attack_type"],
+            "score": result["score"],
+            "latitude": flight_data.get("latitude"),
+            "longitude": flight_data.get("longitude"),
+            "velocity": flight_data.get("velocity"),
+            "baro_altitude": flight_data.get("baro_altitude"),
+        }, model_name="Isolation Forest", threshold=-0.0949)
     errors_history.append(result["score"])
 
     callsign = flight_data.get("callsign", "?") or "?"
@@ -202,16 +217,23 @@ def print_stats(current_threshold):
         f"{stats['buffer_ready']} windows | "
         f"{stats['anomalies']} anomalies ({anom_pct:.1f}%) | "
         f"{rate:.1f} msg/s | ES errors: {stats['es_errors']}")
+
+    p50 = p90 = p95 = max_err = None
     if len(errors_history) >= 10:
         err_arr = list(errors_history)
         p50 = float(np.percentile(err_arr, 50))
         p90 = float(np.percentile(err_arr, 90))
         p95 = float(np.percentile(err_arr, 95))
+        max_err = float(max(err_arr))
         log(f"[DIST] score: p50={p50:.2f} p90={p90:.2f} p95={p95:.2f} | threshold={current_threshold:.4f}")
+
+    uptime = time.time() - START_TIME
+    tg_notify_performance(dict(stats), "Isolation Forest", p50, p90, p95, max_err, uptime)
 
 
 def main():
-    global last_report
+    global last_report, START_TIME
+    START_TIME = time.time()
 
     log("=" * 55)
     log("MEIVA DETECTOR IF — Isolation Forest")
@@ -219,6 +241,7 @@ def main():
 
     log("\n[1/3] Loading model...")
     if_model, scaler, threshold = load_model()
+    notify_startup("Isolation Forest")
 
     log("\n[2/3] Connecting to services...")
     es = connect_es()

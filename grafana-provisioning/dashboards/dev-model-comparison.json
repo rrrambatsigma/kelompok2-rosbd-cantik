@@ -1,0 +1,361 @@
+{
+  "title": "Model Performance — VAE vs IF",
+  "uid": "adsb-dev-model-compare",
+  "version": 1,
+  "schemaVersion": 36,
+  "tags": ["ads-b", "dev", "comparison"],
+  "timezone": "browser",
+  "editable": true,
+  "refresh": "10s",
+  "time": { "from": "now-15m", "to": "now" },
+  "panels": [
+    {
+      "title": "VAE — Anomaly Count",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "targets": [{
+        "expr": "anomaly count",
+        "format": "table",
+        "intervalFactor": 1,
+        "refId": "A",
+        "dataSource": "Elasticsearch",
+        "query": {
+          "index": "anomaly-stream",
+          "query": "is_anomaly: true",
+          "timeField": "processed_at"
+        },
+        "metrics": [{ "type": "count", "id": "1" }],
+        "bucketAggs": [{ "type": "date_histogram", "field": "processed_at", "settings": { "interval": "10s" }, "id": "2" }]
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "background" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          },
+          "reduceOptions": { "calcs": ["sum"] }
+        }
+      },
+      "description": "Total anomaly windows detected by VAE-LSTM"
+    },
+    {
+      "title": "VAE — Total Windows",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "targets": [{
+        "expr": "total windows",
+        "format": "table",
+        "intervalFactor": 1,
+        "refId": "A",
+        "dataSource": "Elasticsearch",
+        "query": {
+          "index": "anomaly-stream",
+          "query": "*",
+          "timeField": "processed_at"
+        },
+        "metrics": [{ "type": "count", "id": "1" }],
+        "bucketAggs": [{ "type": "date_histogram", "field": "processed_at", "settings": { "interval": "10s" }, "id": "2" }]
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "reduceOptions": { "calcs": ["sum"] }
+        }
+      },
+      "description": "Total windows processed by VAE-LSTM"
+    },
+    {
+      "title": "IF — Anomaly Count",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+      "targets": [{
+        "expr": "anomaly count",
+        "format": "table",
+        "intervalFactor": 1,
+        "refId": "A",
+        "dataSource": "Elasticsearch",
+        "query": {
+          "index": "anomaly-stream-if",
+          "query": "is_anomaly: true",
+          "timeField": "processed_at"
+        },
+        "metrics": [{ "type": "count", "id": "1" }],
+        "bucketAggs": [{ "type": "date_histogram", "field": "processed_at", "settings": { "interval": "10s" }, "id": "2" }]
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "background" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          },
+          "reduceOptions": { "calcs": ["sum"] }
+        }
+      },
+      "description": "Total anomaly windows detected by Isolation Forest"
+    },
+    {
+      "title": "IF — Total Windows",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+      "targets": [{
+        "expr": "total windows",
+        "format": "table",
+        "intervalFactor": 1,
+        "refId": "A",
+        "dataSource": "Elasticsearch",
+        "query": {
+          "index": "anomaly-stream-if",
+          "query": "*",
+          "timeField": "processed_at"
+        },
+        "metrics": [{ "type": "count", "id": "1" }],
+        "bucketAggs": [{ "type": "date_histogram", "field": "processed_at", "settings": { "interval": "10s" }, "id": "2" }]
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "reduceOptions": { "calcs": ["sum"] }
+        }
+      },
+      "description": "Total windows processed by Isolation Forest"
+    },
+    {
+      "title": "VAE — Recon Error Distribution (p50/p90/p95)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "targets": [{
+        "format": "timeseries",
+        "intervalFactor": 1,
+        "refId": "A",
+        "dataSource": "Elasticsearch",
+        "query": {
+          "index": "anomaly-stream",
+          "query": "*",
+          "timeField": "processed_at"
+        },
+        "metrics": [{
+          "type": "percentiles",
+          "field": "recon_error",
+          "settings": { "percents": [50, 90, 95] },
+          "id": "1"
+        }],
+        "bucketAggs": [{ "type": "date_histogram", "field": "processed_at", "settings": { "interval": "auto" }, "id": "2" }]
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "lineInterpolation": "smooth",
+            "showPoints": "never",
+            "gradientMode": "opacity"
+          }
+        }
+      },
+      "description": "Reconstruction error percentiles over time (VAE-LSTM)"
+    },
+    {
+      "title": "IF — Anomaly Score Distribution (p50/p90/p95)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "targets": [{
+        "format": "timeseries",
+        "intervalFactor": 1,
+        "refId": "A",
+        "dataSource": "Elasticsearch",
+        "query": {
+          "index": "anomaly-stream-if",
+          "query": "*",
+          "timeField": "processed_at"
+        },
+        "metrics": [{
+          "type": "percentiles",
+          "field": "if_score",
+          "settings": { "percents": [50, 90, 95] },
+          "id": "1"
+        }],
+        "bucketAggs": [{ "type": "date_histogram", "field": "processed_at", "settings": { "interval": "auto" }, "id": "2" }]
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "lineInterpolation": "smooth",
+            "showPoints": "never",
+            "gradientMode": "opacity"
+          }
+        }
+      },
+      "description": "Anomaly score percentiles over time (Isolation Forest)"
+    },
+    {
+      "title": "VAE — Attack Type Distribution",
+      "type": "piechart",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+      "targets": [{
+        "format": "table",
+        "intervalFactor": 1,
+        "refId": "A",
+        "dataSource": "Elasticsearch",
+        "query": {
+          "index": "anomaly-stream",
+          "query": "is_anomaly: true",
+          "timeField": "processed_at"
+        },
+        "metrics": [{ "type": "count", "id": "1" }],
+        "bucketAggs": [{ "type": "terms", "field": "attack_type.keyword", "settings": { "size": 10, "order": "desc", "orderBy": "_count", "min_doc_count": 1 }, "id": "2" }]
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "displayMode": "basic" }
+        }
+      },
+      "description": "Breakdown of anomaly types detected by VAE-LSTM"
+    },
+    {
+      "title": "IF — Attack Type Distribution",
+      "type": "piechart",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+      "targets": [{
+        "format": "table",
+        "intervalFactor": 1,
+        "refId": "A",
+        "dataSource": "Elasticsearch",
+        "query": {
+          "index": "anomaly-stream-if",
+          "query": "is_anomaly: true",
+          "timeField": "processed_at"
+        },
+        "metrics": [{ "type": "count", "id": "1" }],
+        "bucketAggs": [{ "type": "terms", "field": "attack_type.keyword", "settings": { "size": 10, "order": "desc", "orderBy": "_count", "min_doc_count": 1 }, "id": "2" }]
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "displayMode": "basic" }
+        }
+      },
+      "description": "Breakdown of anomaly types detected by Isolation Forest"
+    },
+    {
+      "title": "VAE — Top Anomalous Flights",
+      "type": "table",
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 20 },
+      "targets": [{
+        "format": "table",
+        "intervalFactor": 1,
+        "refId": "A",
+        "dataSource": "Elasticsearch",
+        "query": {
+          "index": "anomaly-stream",
+          "query": "is_anomaly: true",
+          "timeField": "processed_at"
+        },
+        "metrics": [
+          { "type": "count", "id": "1" },
+          { "type": "max", "field": "recon_error", "id": "2" }
+        ],
+        "bucketAggs": [
+          { "type": "terms", "field": "icao24.keyword", "settings": { "size": 10, "order": "desc", "orderBy": "_count", "min_doc_count": 1 }, "id": "3" }
+        ]
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "displayMode": "basic",
+            "align": "auto"
+          }
+        }
+      },
+      "description": "Top 10 flights with most VAE-LSTM anomalies"
+    },
+    {
+      "title": "IF — Top Anomalous Flights",
+      "type": "table",
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 20 },
+      "targets": [{
+        "format": "table",
+        "intervalFactor": 1,
+        "refId": "A",
+        "dataSource": "Elasticsearch",
+        "query": {
+          "index": "anomaly-stream-if",
+          "query": "is_anomaly: true",
+          "timeField": "processed_at"
+        },
+        "metrics": [
+          { "type": "count", "id": "1" },
+          { "type": "max", "field": "if_score", "id": "2" }
+        ],
+        "bucketAggs": [
+          { "type": "terms", "field": "icao24.keyword", "settings": { "size": 10, "order": "desc", "orderBy": "_count", "min_doc_count": 1 }, "id": "3" }
+        ]
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "displayMode": "basic",
+            "align": "auto"
+          }
+        }
+      },
+      "description": "Top 10 flights with most IF anomalies"
+    },
+    {
+      "title": "VAE — Recent Anomalies",
+      "type": "table",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 26 },
+      "targets": [{
+        "format": "table",
+        "intervalFactor": 1,
+        "refId": "A",
+        "dataSource": "Elasticsearch",
+        "query": {
+          "index": "anomaly-stream",
+          "query": "is_anomaly: true",
+          "timeField": "processed_at"
+        },
+        "metrics": [{
+          "type": "raw_data",
+          "id": "1",
+          "settings": {
+            "fields": ["processed_at", "timestamp", "icao24", "callsign", "recon_error", "attack_type", "velocity", "baro_altitude"],
+            "size": 50,
+            "order": "desc",
+            "orderBy": "processed_at"
+          }
+        }]
+      }],
+      "description": "Latest 50 anomalies detected by VAE-LSTM"
+    },
+    {
+      "title": "IF — Recent Anomalies",
+      "type": "table",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 26 },
+      "targets": [{
+        "format": "table",
+        "intervalFactor": 1,
+        "refId": "A",
+        "dataSource": "Elasticsearch",
+        "query": {
+          "index": "anomaly-stream-if",
+          "query": "is_anomaly: true",
+          "timeField": "processed_at"
+        },
+        "metrics": [{
+          "type": "raw_data",
+          "id": "1",
+          "settings": {
+            "fields": ["processed_at", "timestamp", "icao24", "callsign", "if_score", "attack_type", "velocity", "baro_altitude"],
+            "size": 50,
+            "order": "desc",
+            "orderBy": "processed_at"
+          }
+        }]
+      }],
+      "description": "Latest 50 anomalies detected by Isolation Forest"
+    }
+  ]
+}

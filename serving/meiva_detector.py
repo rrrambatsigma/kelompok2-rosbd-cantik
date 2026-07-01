@@ -31,6 +31,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, BASE_DIR)
 
 from modelling.anomaly.vae_lstm import VAELSTM
+from utils.telegram_notifier import notify_startup, notify_performance as tg_notify_performance, notify_anomaly as tg_notify_anomaly
 
 # ─── KONFIGURASI ────────────────────────────────────────────
 KAFKA_HOST = "100.99.130.69:9093"
@@ -48,7 +49,8 @@ REPORT_INTERVAL = 30
 # ─── STATE ──────────────────────────────────────────────────
 buffers = defaultdict(lambda: deque(maxlen=WINDOW_SIZE))
 last_infer_time = {}
-stats = {"total": 0, "anomalies": 0, "buffer_ready": 0, "es_errors": 0, "reconnects": 0}
+stats = {"total": 0, "anomalies": 0, "buffer_ready": 0, "es_errors": 0, "reconnects": 0,
+         "attack_counts": defaultdict(int)}
 last_report = time.time()
 THROTTLE_SECONDS = 3
 errors_history = deque(maxlen=1000)
@@ -224,6 +226,17 @@ def predict_and_save(icao24, flight_data, vae, scaler, threshold, es):
     stats["buffer_ready"] += 1
     if result["is_anomaly"]:
         stats["anomalies"] += 1
+        stats["attack_counts"][result["attack_type"]] += 1
+        tg_notify_anomaly({
+            "icao24": icao24,
+            "callsign": flight_data.get("callsign", "?"),
+            "attack_type": result["attack_type"],
+            "recon_error": result["recon_error"],
+            "latitude": flight_data.get("latitude"),
+            "longitude": flight_data.get("longitude"),
+            "velocity": flight_data.get("velocity"),
+            "baro_altitude": flight_data.get("baro_altitude"),
+        }, model_name="VAE-LSTM", threshold=2.0)
     errors_history.append(result["recon_error"])
 
     # Log ke console
@@ -274,17 +287,24 @@ def print_stats(current_threshold):
         f"{stats['anomalies']} anomalies ({anom_pct:.1f}%) | "
         f"{rate:.1f} msg/s | "
         f"ES errors: {stats['es_errors']}")
+
+    p50 = p90 = p95 = max_err = None
     if len(errors_history) >= 10:
         err_arr = list(errors_history)
         p50 = float(np.percentile(err_arr, 50))
         p90 = float(np.percentile(err_arr, 90))
         p95 = float(np.percentile(err_arr, 95))
+        max_err = float(max(err_arr))
         log(f"[DIST] error: p50={p50:.2f} p90={p90:.2f} p95={p95:.2f} | "
             f"threshold={current_threshold:.1f}")
 
+    uptime = time.time() - START_TIME
+    tg_notify_performance(dict(stats), "VAE-LSTM", p50, p90, p95, max_err, uptime)
+
 
 def main():
-    global last_report
+    global last_report, START_TIME
+    START_TIME = time.time()
 
     log("=" * 55)
     log("MEIVA DETECTOR — VAE-LSTM v3")
@@ -293,6 +313,7 @@ def main():
     # Load model
     log("\n[1/3] Loading model...")
     vae, scaler, threshold = load_model()
+    notify_startup("VAE-LSTM")
 
     # Connect ES (opsional, fallback ke console-only)
     log("\n[2/3] Connecting to services...")

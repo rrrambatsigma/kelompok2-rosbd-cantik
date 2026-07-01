@@ -55,6 +55,7 @@ scaler = None
 config = None
 threshold = None
 es = None
+eval_metrics = None
 
 buffers = defaultdict(lambda: deque(maxlen=WINDOW_SIZE))
 buffer_last_access = {}
@@ -169,7 +170,7 @@ def classify_attack(per_feature_error):
 
 @app.on_event("startup")
 async def on_startup():
-    global if_model, scaler, config, threshold, es
+    global if_model, scaler, config, threshold, es, eval_metrics
 
     connect_es()
     loop = asyncio.get_event_loop()
@@ -186,6 +187,12 @@ async def on_startup():
             config = json.load(f)
         threshold = config.get("f1max_threshold", -0.0949)
         print(f"[SERVING IF] Threshold: {threshold:.4f}")
+
+    metrics_path = os.path.join(MODEL_DIR, "metrics.json")
+    if os.path.exists(metrics_path):
+        with open(metrics_path) as f:
+            eval_metrics = json.load(f)
+        print(f"[SERVING IF] Loaded eval metrics: F1={eval_metrics['f1']:.4f}, AUC={eval_metrics['auc']:.4f}")
 
     try:
         if_model = joblib.load(vae_path)
@@ -446,3 +453,24 @@ async def api_stream():
                 pass
             await asyncio.sleep(3)
     return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
+@app.get("/api/evaluation")
+def api_evaluation():
+    global eval_metrics
+    if eval_metrics is None:
+        raise HTTPException(status_code=404, detail="Evaluation metrics not found. Run training first.")
+    cm = eval_metrics["confusion_matrix"]
+    total = cm["tp"] + cm["fp"] + cm["fn"] + cm["tn"]
+    return {
+        "accuracy": eval_metrics["accuracy"],
+        "precision": eval_metrics["precision"],
+        "recall": eval_metrics["recall"],
+        "f1": eval_metrics["f1"],
+        "auc": eval_metrics["auc"],
+        "threshold": eval_metrics.get("f1max_threshold", eval_metrics.get("best_threshold")),
+        "best_method": eval_metrics["best_method"],
+        "total_test_windows": total,
+        "confusion_matrix": cm,
+        "per_attack_recall": eval_metrics["per_attack"],
+    }

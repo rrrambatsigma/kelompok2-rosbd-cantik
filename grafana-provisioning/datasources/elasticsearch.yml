@@ -5,11 +5,10 @@ datasources:
     type: elasticsearch
     access: proxy
     url: http://elasticsearch:9200
-    database: "[anomaly-stream,anomaly-results,model-performance,flights]"
+    database: "[anomaly-stream,anomaly-stream-if,flights]"
     isDefault: true
     jsonData:
       esVersion: 8.11.0
-      timeField: timestamp
-      interval: "10s"
+      timeField: processed_at
       logMessageField: "callsign"
       logLevelField: "attack_type"
